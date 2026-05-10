@@ -1,3 +1,0 @@
-shiny>=1.2.0
-shinyswatch>=0.7.0
-htmltools>=0.5.0
