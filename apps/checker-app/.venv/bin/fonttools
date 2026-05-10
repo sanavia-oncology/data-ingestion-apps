@@ -1,4 +1,4 @@
-#!/Users/kwameokrah/claude_code/shiny/python/checker-app/.venv/bin/python3
+#!/Users/kwameokrah/claude_code/shiny/python/data-ingestion-apps/apps/checker-app/.venv/bin/python3
 # -*- coding: utf-8 -*-
 import re
 import sys

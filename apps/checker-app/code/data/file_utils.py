@@ -39,25 +39,26 @@ def read_pinfo_csvs(paths: list[str]) -> dict[str, pd.DataFrame]:
 
 
 def read_fcs_head(paths: list[str]) -> pd.DataFrame:
-    import fcsparser
+    import flowio
 
     rows = []
     for path in paths:
         fname = Path(path).name
         try:
-            meta = fcsparser.parse(path, meta_data_only=True, reformat_meta=False)
+            fd = flowio.FlowData(path, only_text=True)
+            meta = fd.text
         except Exception:
             meta = {}
 
-        def get(key):
-            return meta.get(key, "not_in_fcs")
+        def get(key, _meta=meta):
+            return _meta.get(key, "not_in_fcs")
 
         rows.append(
             {
-                "PLATENAME": get("$PLATENAME"),
-                "WELLID": get("$WELLID"),
-                "DATE": get("$DATE"),
-                "TOT": get("$TOT"),
+                "PLATENAME": get("platename"),
+                "WELLID": get("wellid"),
+                "DATE": get("date"),
+                "TOT": get("tot"),
                 "Filename": fname,
             }
         )
