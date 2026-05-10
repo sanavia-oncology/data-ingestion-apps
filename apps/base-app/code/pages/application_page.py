@@ -34,6 +34,7 @@ _app_card = ui.div(
             ui.input_action_button("click_me1", "Click Me"),
             width=250,
             open="always",
+            resizable=False,
             bg="rgba(238, 238, 238, 1)",
         ),
         _main_contents,
