@@ -921,21 +921,8 @@ approved_qc_report = function(data_path,
                               author_qc = "unknown",
                               experiment_type = "none",
                               dose_type = "none") {
-    report_path = paste0(gsub("/$", "", data_path), "/", "qc_report")
-
-    if (!dir.exists(report_path)) {
-        dir.create(report_path)
-    }
-
-    existing_files = list.files(report_path)
-    if (length(existing_files)) {
-        # remove files
-        for (efl in existing_files) {
-            file.remove(paste0(report_path, "/", efl))
-        }
-    }
-
-    fig_path = paste0(report_path, "/", Sys.Date(), "-qc-report.pdf")
+    
+    fig_path = paste0(data_path, "/", Sys.Date(), "-qc-report.pdf")
     make_qc_report(pinfo_sheets, merge_info, fig_path, approved=TRUE)
 
     if (is.null(merge_info)) {
@@ -953,6 +940,6 @@ approved_qc_report = function(data_path,
     merged_data$experiment_type = experiment_type
     merged_data$dose_type = dose_type
     
-    table_path = paste0(report_path, "/", Sys.Date(), "-merged-data.csv")
+    table_path = paste0(data_path, "/", Sys.Date(), "-merged-data.csv")
     write.csv(merged_data, file=table_path, row.names=FALSE)
 }

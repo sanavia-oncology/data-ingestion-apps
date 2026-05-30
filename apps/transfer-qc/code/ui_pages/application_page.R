@@ -23,19 +23,9 @@ app_card = tags$div(
             tags$p(id="current_date",
                    paste0("Today's date: ", Sys.Date()),
                    class="text-secondary"),
-            selectizeInput(
-                inputId = "selected_assay",
-                label = "Select assay type",
-                choices = c("Flow Cytometry" = "fcs",
-                            "Derived Results" = "derived-results",
-                            "Elisa" = "varioskan-skax",
-                            "Octet Kinetics"="frd"),
-                selected = character(0),
-                options = list(
-                    placeholder = 'Select assay type',
-                    onInitialize = I('function() { this.setValue(""); }')
-                )
-            )
+            shinyDirButton(id = "folder", 
+                           label = "Choose Project Folder",
+                           title = "Select a folder")
         ),
         
         main_contents

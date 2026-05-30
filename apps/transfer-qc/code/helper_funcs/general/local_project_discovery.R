@@ -44,6 +44,9 @@ front_page_table = function(project_paths, assay_type) {
         n_assays = length(grep(assay_type, x[["assay_data"]]))
         n_qcrepo = length(grep("merged-data.csv$", x[["qc_report"]]))
         
+        proj_group = sapply(strsplit(pinfos_paths[1], k), "[[", 1)
+        proj_group = sapply(strsplit(proj_group, "/"), function(x) x[length(x)])
+        
         ctime = as.Date(sort(file.info(pinfos_paths)$mtime)[1])
         if (n_qcrepo > 0) {
             has_qr = "Yes"  
@@ -51,7 +54,8 @@ front_page_table = function(project_paths, assay_type) {
             has_qr = "No"
         } 
         
-        hold[[k]] = data.frame("Date Created"=ctime, 
+        hold[[k]] = data.frame("Date Created"=ctime,
+                               "Project Group"=proj_group,
                                "Project Name"=k, 
                                "Plate Sheets"=n_pinfos,
                                "Assay Files"=n_assays,
