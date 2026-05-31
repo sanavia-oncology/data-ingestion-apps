@@ -79,14 +79,7 @@ server = function(input, output, session) {
                         DT::dataTableOutput("projects_table")
                     )
                     
-                    # # update input_files
-                    # data = table_front_page
-                    # if (input$has_qcr != "All") {
-                    #     data = data[data[["Has QC Report"]] == input$has_qcr,]
-                    # }
-                    # if (input$proj_group != "All") {
-                    #     data = data[data[["Project Group"]] == input$proj_group,]
-                    # }
+                    # update input_files
                     input_files$table_front_page = table_front_page
                     
                 }else{

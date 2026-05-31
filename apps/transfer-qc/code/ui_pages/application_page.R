@@ -46,16 +46,6 @@ app_card = tags$div(
     )
 )
 
-selectizeInput(
-    "x", "Label",
-    choices = c("A", "B", "C"),
-    selected = character(0),
-    options = list(
-        placeholder = 'Select an option',
-        onInitialize = I('function() { this.setValue(""); }')
-    )
-)
-
 application_page = bslib::nav_panel(
     tags$style(
         HTML("
