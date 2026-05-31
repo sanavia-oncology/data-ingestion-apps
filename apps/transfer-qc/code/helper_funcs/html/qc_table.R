@@ -15,7 +15,7 @@ qc_table = function(error_matrix, show_rownames=TRUE) {
     nc = length(qc_check_groups)
     
     width = "width: 45px;"
-    height = "height: 45px;"
+    height = "height: 35px;"
 
     font_size = "font-size: 10px";
 

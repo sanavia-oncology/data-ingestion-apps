@@ -3,68 +3,25 @@
 
 server = function(input, output, session) {
     # step 1: get data file paths
-    input_files = reactiveValues()
+    folder_path = "/Users/kwameokrah/data_depo"
     
-    roots = c(Projects = "/Users/kwameokrah/data_depo")
-    shinyDirChoose(input, "folder", roots=roots, allowDirCreate=FALSE)
-    
-    observe({
-        if (isTruthy(input$folder)) {
-            removeUI(selector = "#selected_assay_div")
-            removeUI(selector = "#selected_project_div")
-            removeUI(selector = "#main_contents1")
+    proj_paths = tryCatch(
+        get_paths_by_project(folder_path),
+        error = function(e) {
+            error_msg = "'get_paths_by_project()' an error occurred (K.Okrah)"
+            return(error_msg)
         }
-
-        req(input$folder)
-        folder_path = parseDirPath(roots, input$folder)
-        req(nchar(folder_path) > 0)
-
-        #---------------------- organize file paths by order
-        proj_paths = tryCatch(
-            get_paths_by_project(folder_path),
-            error = function(e) {
-                error_msg = "'get_paths_by_project()' an error occurred (K.Okrah)"
-                return(error_msg)
-            }
-        )
-        
-        #---------------------- insert UI
-        insertUI(
-            selector = "#folder",
-            where    = "afterEnd",
-            ui = tags$div(
-                id = "selected_assay_div",
-                selectizeInput(
-                    inputId = "selected_assay",
-                    label = "Select assay type",
-                    choices = c("Flow Cytometry" = "fcs",
-                                "Derived Results" = "derived-results",
-                                "Elisa" = "varioskan-skax",
-                                "Octet Kinetics"="frd"),
-                    selected = character(0),
-                    options = list(
-                        placeholder = 'Select assay type',
-                        onInitialize = I('function() { this.setValue(""); }')
-                    )
-                )  
-            )
-        )
-        
-        input_files$folder_path = folder_path
-        input_files$proj_paths = proj_paths
-        
-    }) |> bindEvent(input$folder)
+    )
     
     
-    # step2: make front table
+    # step 2: make front table
+    input_files = reactiveValues()
     observe({
         if (isTruthy(input$selected_assay)) {
             removeUI(selector = "#main_contents1")
             removeUI(selector = "#selected_project_div")
         }
-        
-        proj_paths = input_files$proj_paths
-        
+
         #---------------------- welcome note
         if (input$selected_assay=="") {
             insert_me1 = tags$p("Welcome, please select your assay type.", 
@@ -122,7 +79,14 @@ server = function(input, output, session) {
                         DT::dataTableOutput("projects_table")
                     )
                     
-                    # update input_files
+                    # # update input_files
+                    # data = table_front_page
+                    # if (input$has_qcr != "All") {
+                    #     data = data[data[["Has QC Report"]] == input$has_qcr,]
+                    # }
+                    # if (input$proj_group != "All") {
+                    #     data = data[data[["Project Group"]] == input$proj_group,]
+                    # }
                     input_files$table_front_page = table_front_page
                     
                 }else{
@@ -148,8 +112,7 @@ server = function(input, output, session) {
         
         #---------------------- other assays: not implemented
         if (!input$selected_assay %in% c("fcs", "")) {
-            print(input$selected_assay)
-            
+
             # table insert
             insert_me1 = tags$div(
                 tags$p(paste0("(", input$selected_assay, ") coming soon!"),
@@ -184,15 +147,25 @@ server = function(input, output, session) {
     }) |> bindEvent(input$selected_assay)
     
     
-    # step3: select a project
+    # step 3: select a project
     observe({
-        if (isTruthy(input$selected_assay)) {
+        if (isTruthy(input$projects_table_rows_selected)) {
             removeUI(selector = "#selected_project_div")
         }
         
         k = input$projects_table_rows_selected
         table_front_page = input_files$table_front_page
-        project_display = table_front_page[k, "Project Name"]
+        
+        sel = rep(TRUE, nrow(table_front_page))
+        if (input$has_qcr!="All") {
+            sel = sel & table_front_page[["Has QC Report"]] %in% input$has_qcr
+        }
+        if (input$proj_group!="All") {
+            sel = sel & table_front_page[["Project Group"]] %in% input$proj_group
+        }
+        
+        table_front_page_sub = table_front_page[sel,,drop=F]
+        project_display = table_front_page_sub[k, "Project Name"]
 
         #---------------------- insert UI
         insertUI(
@@ -219,7 +192,7 @@ server = function(input, output, session) {
     }) |> bindEvent(input$projects_table_rows_selected)
     
     
-    # step4: perform qc
+    # step 4: perform qc
     err_react_vals = reactiveValues()
     observe({
         if (isTruthy(input$perform_checks)) {
@@ -229,8 +202,7 @@ server = function(input, output, session) {
         #------------------------- load pinfo_sheets & assay_data
         selected_project = input_files$selected_project
         selected_assay = input$selected_assay
-        proj_paths = input_files$proj_paths
-        
+ 
         file_paths = proj_paths[[selected_project]]
         pinfo_csv_paths = file_paths[["pinfos"]]
         assay_file_paths = file_paths[["assay_data"]]
@@ -251,6 +223,20 @@ server = function(input, output, session) {
         colnames(checks_summary) = key[colnames(checks_summary)]
         names(checks_detailed) = key[names(checks_detailed)]
 
+        #------------------------- merge assay_data and pinfo_sheets
+        res = merge_assay_data(assay_data, pinfo_sheets)
+        merge_info = res[["merge_info"]]
+        assay_position_check_summary = res[["assay_position_check_summary"]]
+        assay_position_check_detailed = res[["assay_position_check_detailed"]]
+        rm("res")  
+        
+        mcheck = sapply(merge_info, function(x) all(x$merge_checks))
+        mcheck = ifelse(mcheck, "Pass", "Fail")
+        
+        checks_summary = rbind(checks_summary, "DATA MERGE"=mcheck)
+        
+        
+        #------------------------- prep. qc table
         QC_CODE = c("QC_00"="Required Columns",
                     "QC_01"="Platename",
                     "QC_02"="Plate Position",
@@ -266,7 +252,8 @@ server = function(input, output, session) {
                     "QC_12"="DATA MERGE")
 
         qc_code = tags$table(
-            style = "color: #343637ff; font-size: 12px; border: 1px solid #a7a9aaff; width: 500px;",
+            style = paste0("color: #343637ff; font-size: 13px;",
+                           " border: 1px solid #a7a9aaff; width: 530px;"),
             tags$tbody(
                 tags$tr(
                     tags$td("QC_01: Platename"),
@@ -291,23 +278,7 @@ server = function(input, output, session) {
             )
         )
         
-        if (is.null(assay_data)) {
-            merge_info = NULL
-            assay_position_check_summary = NULL
-            assay_position_check_detailed = NULL
-        }else{
-            res = merge_assay_data(assay_data, pinfo_sheets)
-            merge_info = res[["merge_info"]]
-            assay_position_check_summary = res[["assay_position_check_summary"]]
-            assay_position_check_detailed = res[["assay_position_check_detailed"]]
-            rm("res")  
-            
-            mcheck = sapply(merge_info, function(x) all(x$merge_checks))
-            mcheck = ifelse(mcheck, "Pass", "Fail")
-            
-            checks_summary = rbind(checks_summary, "DATA MERGE"=mcheck)
-        }
-        
+        #------------------------- check errors conditions
         checks_summary1 = checks_summary[1,,drop=F]
         checks_summary2 = checks_summary[2:nrow(checks_summary),,drop=F]
         
@@ -315,6 +286,7 @@ server = function(input, output, session) {
         cond2a = !all(checks_summary2 == "Pass")
         cond2b = all(checks_summary2 == "Pass")
         
+        # make inserts depending on error conditions
         if (cond1) {
             main_tp = tags$p(
                 class = "h6 card-title text-danger",
@@ -415,9 +387,9 @@ server = function(input, output, session) {
             }
         }
         
-        if (cond2b && input$selected_assay == "fcs") {
+        if (cond2b && input$selected_assay=="fcs") {
             
-            # MFI Selection
+            # MFI selection
             PAR_STRING_L = strsplit(assay_data$PAR_STRING, ";")
             
             uchannels = unique(unlist(PAR_STRING_L))
@@ -516,23 +488,25 @@ server = function(input, output, session) {
         names(rev_key) = key
         
         
-        path2_proj = sapply(strsplit(pinfo_csv_paths[1], "plate_information_sheets"), 
+        path2_proj = sapply(strsplit(pinfo_csv_paths[1], 
+                                     "plate_information_sheets"), 
                             "[[", 1)
-        
         err_react_vals$path2_proj = path2_proj
         
-        err_react_vals$data_list = list(checks_detailed = checks_detailed,
-                                        merge_info = merge_info,
-                                        pinfo_sheets = pinfo_sheets,
-                                        assay_position_check_summary = assay_position_check_summary,
-                                        assay_position_check_detailed = assay_position_check_detailed,
-                                        rev_key = rev_key,
-                                        QC_CODE = QC_CODE)
+        data_list = list(checks_detailed = checks_detailed,
+                         merge_info = merge_info,
+                         pinfo_sheets = pinfo_sheets,
+                         assay_position_check_summary = assay_position_check_summary,
+                         assay_position_check_detailed = assay_position_check_detailed,
+                         rev_key = rev_key,
+                         QC_CODE = QC_CODE)
+        
+        err_react_vals$data_list = data_list
         
     }) |> bindEvent(input$perform_checks)
     
     
-    # step5: message box
+    # step 5: message box
     observe({
         if (isTruthy(input$last_cell_clicked)) {
             removeUI(selector = "#detailed_message_box")
@@ -596,7 +570,7 @@ server = function(input, output, session) {
     }) |> bindEvent(input$last_cell_clicked)
     
     
-    # step6: mfi channel info.
+    # step 6: mfi channel info.
     observe({
         if (isTruthy(input$select_mfi_ch)) {
             removeUI(selector = "#mfi_channel_div")
@@ -668,7 +642,7 @@ server = function(input, output, session) {
     }) |> bindEvent(input$select_mfi_ch)
     
     
-    # step7: annotation page
+    # step 7: annotation page
     observe({
         if (isTruthy(input$add_notes)) {
             removeUI(selector = "#main_contents1")
@@ -712,10 +686,10 @@ server = function(input, output, session) {
                            class="text-secondary"),
                     tags$div(
                         textAreaInput( 
-                            "text", 
+                            "notes", 
                             "Text input", 
                             placeholder = "The quick brown fox jumped over the lazy dog...",
-                            width="500px",
+                            width="480px",
                         )
                     ),
                 ),
@@ -759,7 +733,7 @@ server = function(input, output, session) {
     }) |> bindEvent(input$add_notes)
     
     
-    # step8: enable "Proceed to Generate QC Report"
+    # step 8: enable "Proceed to Generate QC Report"
     observe({
         if (!is.null(input$experiment_type) & !is.null(input$dose_type)) {
             if (input$experiment_type!="none" & input$dose_type!="none") {
@@ -771,7 +745,7 @@ server = function(input, output, session) {
     })
     
     
-    # step9: semantic qc report
+    # step 9: semantic qc report
     observe({
         data_list = err_react_vals$data_list
         merge_info = data_list[["merge_info"]]
@@ -794,7 +768,7 @@ server = function(input, output, session) {
                        class="text-secondary"),
                 
                 tags$div(
-                    style="height: 477px",
+                    style="height: 450px",
                     tags$iframe(
                         src="docs/tlgs/qc-report-preview.pdf",
                         width="100%",
@@ -829,7 +803,7 @@ server = function(input, output, session) {
     }) |> bindEvent(input$qc_report)
     
     
-    # step10: download report and exit
+    # step 10: download report and exit
     observe({
         if (isTruthy(input$selected_assay)) {
             removeUI(selector = "#main_contents1")
@@ -853,7 +827,8 @@ server = function(input, output, session) {
                                               " | ",
                                               Sys.info()[["nodename"]]),
                            experiment_type=input$experiment_type,
-                           dose_type=input$dose_type)
+                           dose_type=input$dose_type,
+                           notes = input$notes)
 
         # write mfi channel csv for fcs assays
         if (input$selected_assay=="fcs" && isTruthy(input$select_mfi_ch)) {
@@ -863,97 +838,7 @@ server = function(input, output, session) {
                       row.names = FALSE)
         }
         
-        
-        
-        
-        #************************************************************************#
-        #************************************************************************#
-        #--------------------- Duplicated code re-run table (to make as func.)
-        proj_paths = input_files$proj_paths
-        
-        table_front_page = tryCatch(
-            front_page_table(proj_paths, input$selected_assay),
-            error = function(e) {
-                error_msg = "'front_page_table()' an error occurred (K.Okrah)"
-                return(error_msg)
-            }
-        )
-        
-        if (!is.character(table_front_page)) {
-            
-            # table definition
-            output$projects_table = DT::renderDataTable(DT::datatable({
-                data = table_front_page
-                if (input$has_qcr != "All") {
-                    data = data[data[["Has QC Report"]] == input$has_qcr,]
-                }
-                if (input$proj_group != "All") {
-                    data = data[data[["Project Group"]] == input$proj_group,]
-                }
-                data
-            }, 
-            selection = "single",
-            options = list(pageLength = 7,  
-                           dom = "tpf",
-                           columnDefs = list(
-                               list(className = 'dt-nowrap', targets = '_all'))
-            )))
-            
-            # table insert
-            insert_me1 = tags$div(
-                tags$p("Select A Project", 
-                       class="h3 text-primary fw-bold text-center"),
-                tags$p("Click on a row to select project and proceed to QC",
-                       class="h6 text-secondary text-center"),
-                fluidRow(
-                    selectInput("proj_group",
-                                "Project Group",
-                                c("All", sort(unique(table_front_page[["Project Group"]])))),
-                    selectInput("has_qcr",
-                                "Has QC Report",
-                                c("No", "Yes", "All"))
-                ),
-                DT::dataTableOutput("projects_table")
-            )
-            
-            # update input_files
-            input_files$table_front_page = table_front_page
-            
-        }else{
-            
-            # error message
-            insert_me1 = tags$div(
-                tags$p(table_front_page,
-                       class="h5 text-danger")
-            )
-            
-        }
-        
-        #---------------------- insert UI
-        insertUI(
-            selector = "#main_contents",
-            where    = "afterEnd",
-            ui = tags$div(
-                id = "main_contents1",
-                tags$div(
-                    class = "row",
-                    tags$div(
-                        class = "col",
-                        id    = "main_contents_col1",
-                        insert_me1
-                    ),
-                    tags$div(
-                        class = "col",
-                        id    = "main_contents_col2",
-                        tags$div(id = "main_contents_col2_1"),
-                        # do nothing
-                    )
-                )
-            )
-        )
-        
-        #************************************************************************#
-        #************************************************************************#
+        session$reload()
         
     }) |> bindEvent(input$accept_report)
     

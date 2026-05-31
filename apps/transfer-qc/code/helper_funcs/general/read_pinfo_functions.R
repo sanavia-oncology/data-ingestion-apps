@@ -54,6 +54,8 @@ get_file_paths = function(data_path, selected_assay) {
 }
 
 read_pinfo_csvs = function(pinfo_csv_paths, selected_assay=NULL) {
+    pinfo_csv_paths = pinfo_csv_paths[grep("pinfo.csv$", pinfo_csv_paths)]
+    
     # read plate info. sheets csvs    
     pinfos = list()
     

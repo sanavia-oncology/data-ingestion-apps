@@ -881,7 +881,7 @@ make_qc_report = function(pinfo_sheets,
         stop("Please provide a fig_path (K.Okrah)")
     }
     
-    pdf(fig_path, height = 4.25, width = 6.5)
+    pdf(fig_path, height = 4.0, width = 6.25)
 
     cover_sheet_plot(pinfo_sheets, approved=approved)
 
@@ -920,7 +920,8 @@ approved_qc_report = function(data_path,
                               merge_info, 
                               author_qc = "unknown",
                               experiment_type = "none",
-                              dose_type = "none") {
+                              dose_type = "none",
+                              notes="none") {
     
     fig_path = paste0(data_path, "/", Sys.Date(), "-qc-report.pdf")
     make_qc_report(pinfo_sheets, merge_info, fig_path, approved=TRUE)
@@ -939,6 +940,7 @@ approved_qc_report = function(data_path,
     
     merged_data$experiment_type = experiment_type
     merged_data$dose_type = dose_type
+    merged_data$notes = notes
     
     table_path = paste0(data_path, "/", Sys.Date(), "-merged-data.csv")
     write.csv(merged_data, file=table_path, row.names=FALSE)
