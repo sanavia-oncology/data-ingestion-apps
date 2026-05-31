@@ -3,7 +3,7 @@
 
 server = function(input, output, session) {
     # step 1: get data file paths
-    folder_path = "/Users/kwameokrah/data_depo"
+    folder_path = "/Users/kwameokrah/data-depot"
     
     proj_paths = tryCatch(
         get_paths_by_project(folder_path),
