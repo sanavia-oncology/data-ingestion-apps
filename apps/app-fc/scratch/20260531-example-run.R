@@ -7,12 +7,12 @@ dotenv::load_dot_env("~/.env_data_ingestion_apps")
 app_dir = Sys.getenv("FC_APP_DIR")
 
 # load helper function
-helper_funcs_dir = paste0(app_dir, "code/helper_funcs")
+helper_funcs_dir = paste0(app_dir, "/code/helper_funcs")
 helper_r_scripts = list.files(helper_funcs_dir, full.names=TRUE, recursive=TRUE)
 for (fl in helper_r_scripts) source(fl)
 
 # set data dir
-project_fldr = "/Users/kwameokrah/data-depot/flow-cytometry"
+project_fldr = Sys.getenv("DATA_DIR")
 selected_assay = "fcs"
 
 # project_paths
