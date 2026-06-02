@@ -78,7 +78,7 @@ server = function(input, output, session) {
                                         c("All", sort(unique(table_front_page[["Project Group"]])))),
                             selectInput("has_qcr",
                                         "Has QC Report",
-                                        c("No", "Yes", "All"))
+                                        c("All", "No", "Yes"))
                         ),
                         DT::dataTableOutput("projects_table")
                     )

@@ -61,7 +61,7 @@ server = function(input, output, session) {
                             c("All", sort(unique(table_front_page[["Project Group"]])))),
                 selectInput("is_gated",
                             "Is Gated",
-                            c("No", "Yes", "All"))
+                            c("All", "No", "Yes"))
             ),
             DT::dataTableOutput("projects_table")
         )
