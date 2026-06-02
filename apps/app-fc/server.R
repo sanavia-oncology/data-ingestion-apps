@@ -249,6 +249,7 @@ server = function(input, output, session) {
                                    "[[", 1)
         path2_proj_folder = paste0(path2_proj_folder, selected_project, "/")
         input_react_vals$path2_proj_folder = path2_proj_folder
+        input_react_vals$selected_project = selected_project
         
     }) |> bindEvent(input$load_project)
     
@@ -1192,9 +1193,9 @@ server = function(input, output, session) {
         gating_results_fldr = paste0(data_path, "gating_results")
         reset_dir(gating_results_fldr)
     
-        print(gating_results_fldr)
+        selected_project = input_react_vals$selected_project
         
-        gate_file_name = "gated-results.csv"
+        gate_file_name = paste0(selected_project, "_gated-results.csv")
         gate_file_path = paste0(gating_results_fldr, "/", gate_file_name)
         write.csv(results_table, file = gate_file_path, row.names = FALSE)
         
@@ -1207,7 +1208,7 @@ server = function(input, output, session) {
         }
         verts_mat = do.call(rbind, verts_)
         
-        verts_file_name = "polygon-vertices.csv"
+        verts_file_name = paste0(selected_project, "_polygon-vertices.csv")
         verts_file_path = paste0(gating_results_fldr, "/", verts_file_name)
         write.csv(verts_mat, file = verts_file_path, row.names = F)
         
