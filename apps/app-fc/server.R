@@ -1247,6 +1247,7 @@ server = function(input, output, session) {
         
         # clear tlgs folder in app
         TLGs_FLS = list.files(paste0(app_dir, "www/docs/tlgs"), full.names=T)
+        TLGs_FLS = TLGs_FLS[grep(".pdf", TLGs_FLS)]
         if (length(TLGs_FLS) > 0) {
             for (fl in TLGs_FLS) {
                 file.remove(fl)    
