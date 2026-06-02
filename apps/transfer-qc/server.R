@@ -2,8 +2,12 @@
 # date: 2026-03-04
 
 server = function(input, output, session) {
+    # get app directory
+    app_dir = paste0(getwd(), "/")
+    
     # step 1: get data file paths
-    folder_path = "/Users/kwameokrah/data-depot"
+    dotenv::load_dot_env("~/.env_data_ingestion_apps")
+    folder_path = Sys.getenv("DATA_DIR")
     
     proj_paths = tryCatch(
         get_paths_by_project(folder_path),
@@ -25,7 +29,7 @@ server = function(input, output, session) {
         #---------------------- welcome note
         if (input$selected_assay=="") {
             insert_me1 = tags$p("Welcome, please select your assay type.", 
-                                class="h5 text-secondary")
+                                class="h6 text-secondary")
         }
         
         #---------------------- flow cytometry
@@ -740,6 +744,11 @@ server = function(input, output, session) {
     
     # step 9: semantic qc report
     observe({
+        
+        if (isTruthy(input$qc_report)) {
+            removeUI(selector = "#qc_report_div")
+        }
+        
         data_list = err_react_vals$data_list
         merge_info = data_list[["merge_info"]]
         pinfo_sheets = data_list[["pinfo_sheets"]]
@@ -827,15 +836,60 @@ server = function(input, output, session) {
         if (input$selected_assay=="fcs" && isTruthy(input$select_mfi_ch)) {
             mfi_channel = data.frame(mfi_channel = input$select_mfi_ch)
             write.csv(mfi_channel,
-                      file = paste0(data_path, "/", Sys.Date(), "-mfi-channel.csv"),
+                      file = paste0(data_path, "/mfi-channel.csv"),
                       row.names = FALSE)
         }
         
-        session$reload()
+        insert_me1 = tags$div(
+            tags$p("Done",
+                   class="h5 text-secondary fw-bold"),
+            tags$p("QCd results are in the project folder.
+                    Go back to the home page or proceed to QC another project.",
+                   class="text-seconday"),
+            actionButton(
+                "reload_app",
+                "QC another project",
+                class="btn-primary"
+            )
+        )
+        
+        insertUI(
+            selector = "#main_contents",
+            where = "afterEnd",
+            
+            ui = tags$div(
+                id = "main_contents1",
+                
+                tags$div(
+                    class="row",
+                    
+                    tags$div(
+                        class="col",
+                        id = "main_contents_col1_annot",
+                        insert_me1
+                    ),
+                    
+                    tags$div(
+                        class="col",
+                        id = "main_contents_col2_annot",
+                    )
+                )
+            )
+        )
+        
+        # clear tlgs folder in app
+        TLGs_FLS = list.files(paste0(app_dir, "www/docs/tlgs"), full.names=T)
+        if (length(TLGs_FLS) > 0) {
+            for (fl in TLGs_FLS) {
+                file.remove(fl)    
+            }
+        }
         
     }) |> bindEvent(input$accept_report)
     
+    
+    observe({
+        session$reload()
+    }) |> bindEvent(input$reload_app)
+    
 }
-
-
-

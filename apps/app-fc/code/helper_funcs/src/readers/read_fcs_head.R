@@ -4,6 +4,8 @@
 # read_fcs_head (read fcs head)
 read_fcs_head = function(assay_file_paths) {
     # read fcs files (header only)
+    assay_file_paths = assay_file_paths[grep(".fcs$", assay_file_paths)]
+    
     assay_files = list()
     
     for (fl in assay_file_paths) {

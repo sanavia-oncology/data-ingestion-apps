@@ -1,16 +1,16 @@
 # author: Kwame Okrah
 # date: 2026-03-04
-
-# set app directory
-app_dir = "/Users/kwameokrah/claude_code/shiny/R/data-ingestion-apps/apps/transfer-qc/"
+library(dotenv)
+dotenv::load_dot_env("~/.env_data_ingestion_apps")
 
 # load helper function
-helper_funcs_dir = paste0(app_dir, "code/helper_funcs")
+app_dir = Sys.getenv("QC_APP_DIR")
+helper_funcs_dir = paste0(app_dir, "/code/helper_funcs")
 helper_r_scripts = list.files(helper_funcs_dir, full.names=TRUE, recursive=TRUE)
 for (fl in helper_r_scripts) source(fl)
 
 # set data dir
-project_fldr = "/Users/kwameokrah/data_depo/flow-cytometry"
+project_fldr = Sys.getenv("DATA_DIR")
 selected_assay = "fcs"
 
 # project_paths
@@ -20,7 +20,8 @@ project_paths = get_paths_by_project(project_fldr)
 front_page_table(project_paths, assay_type="fcs")
 
 # select a project
-selected_project = "2026-04-13_CFwt-47-52-39 benchmarks"
+# selected_project = "2026-04-13_CFwt-47-52-39 benchmarks"
+selected_project = "2026-06-01_A431-ME06"
 
 # get pinfo_csv_paths and assay_file_paths
 file_paths = project_paths[[selected_project]]

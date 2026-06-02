@@ -1,8 +1,10 @@
 # author: Kwame Okrah
 # date: 2026-03-04
+library(dotenv)
+dotenv::load_dot_env("~/.env_data_ingestion_apps")
 
 # set app directory
-app_dir = "/Users/kwameokrah/claude_code/shiny/R/data-ingestion-apps/apps/app-fc/"
+app_dir = Sys.getenv("FC_APP_DIR")
 
 # load helper function
 helper_funcs_dir = paste0(app_dir, "code/helper_funcs")
@@ -10,7 +12,7 @@ helper_r_scripts = list.files(helper_funcs_dir, full.names=TRUE, recursive=TRUE)
 for (fl in helper_r_scripts) source(fl)
 
 # set data dir
-project_fldr = "/Users/kwameokrah/data_depo/flow-cytometry"
+project_fldr = "/Users/kwameokrah/data-depot/flow-cytometry"
 selected_assay = "fcs"
 
 # project_paths
@@ -21,7 +23,8 @@ df = front_page_table2(project_paths, assay_type="fcs")
 df
 
 # select a project
-selected_project = "2026-03-31_KO-Demo"
+selected_project = "2026-04-07-pHrodo_CFWT-CF39-HT29-MxE-MxT-AT02_01"
+# selected_project = "2026-03-31_KO-Demo"
 
 # read in fcs files
 path_list = project_paths[[selected_project]]
@@ -36,9 +39,6 @@ op = par(mfrow=c(2, 3))
 plot_plate_events(pinfos, is_gated = FALSE, fig_path = NULL)
 events_boxplot(pinfos$Result)
 par(op)
-
-pinfos = input_react_vals$pinfos
-fcs_files = input_react_vals$fcs_files
 
 ref = rownames(pinfos)
 refl = split(ref, pinfos$Platename)
@@ -115,5 +115,7 @@ plot_mfi(results_table)
 
 # events boxplot
 events_boxplot(results_table$Result, results_table[, "/intact/singlet/viable"])
+
+
 
 

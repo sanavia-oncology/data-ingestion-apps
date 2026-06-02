@@ -2,7 +2,9 @@
 # date: 2025-11-14
 
 read_derived_results_csvs = function(assay_file_paths) {
-  
+    assay_file_paths = assay_file_paths[grep("derived-results.csv$", 
+                                             assay_file_paths)]
+    
     hold = list()
     
     for (fl in assay_file_paths) {
@@ -19,6 +21,8 @@ read_derived_results_csvs = function(assay_file_paths) {
 }
 
 read_fcs_head = function(assay_file_paths) {
+    assay_file_paths = assay_file_paths[grep(".fcs$", assay_file_paths)]
+    
     # read fcs files (header only)
     assay_files = list()
     
@@ -67,11 +71,15 @@ read_fcs_head = function(assay_file_paths) {
 }
 
 read_assay_data = function(assay_file_paths, selected_assay) {
+    
     if (selected_assay == "fcs") {
+        assay_file_paths = assay_file_paths[grep(".fcs$", assay_file_paths)]
         res = read_fcs_head(assay_file_paths)
     }
 
     if (selected_assay == "derived-results") {
+        assay_file_paths = assay_file_paths[grep("derived-results.csv$", 
+                                                 assay_file_paths)]
         res = read_derived_results_csvs(assay_file_paths)
     }
 

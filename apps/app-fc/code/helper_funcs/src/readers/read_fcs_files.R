@@ -7,6 +7,8 @@ read_fcs_files = function(assay_file_paths, verbose=FALSE) {
         cat("loading fcs files...\n")
     }
     
+    assay_file_paths = assay_file_paths[grep(".fcs$", assay_file_paths)]
+    
     # 1. read header only
     FCS_HEAD = read_fcs_head(assay_file_paths)
     

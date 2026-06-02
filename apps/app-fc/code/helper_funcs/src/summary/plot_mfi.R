@@ -14,14 +14,13 @@ plot_mfi = function(results_table, fig_path=NULL) {
     
     op = par(mar=c(3.25, 3.25, 1.25, 0.75), 
              mgp=c(2, 0.75, 0),
-             mfrow=c(1, 2))
+             mfrow=c(1, 1))
     
     for (pl in names(pinfos_by_platename)) {
         plate_df = pinfos_by_platename[[pl]]
         
         y = plate_df[,csel]
-        z = plate_df[,"Cells Neg"] * 100
-        
+
         x = plate_df$"Plate Position"
         
         nr = 8; nc = 12
@@ -29,14 +28,10 @@ plot_mfi = function(results_table, fig_path=NULL) {
         x = factor(x, levels = lvls)
 
         names(y) = x
-        names(z) = x
-        
+
         y = y[levels(x)]
         names(y) = levels(x)
-        
-        z = z[levels(x)]
-        names(z) = levels(x)
-        
+
         ylim = c(tmin, tmax)
         
         plot(0, 0, pch="", xlim=c(0, 97), ylim=ylim,
@@ -47,14 +42,6 @@ plot_mfi = function(results_table, fig_path=NULL) {
         abline(v=seq(12, 84, by=12) + 0.5, col="gray80")
         points(y, pch=19, col="steelblue", cex=0.65)
         
-        plot(0, 0, pch="", xlim=c(0, 97), ylim=c(0, 100),
-             xaxs="i", xaxt="n", xlab="Well ID", 
-             ylab="Percent %",
-             main=paste0(plate_df$mfi_channel[1], " Negative Events %"))
-        axis(1, at=1:length(z), names(z), cex.axis=0.9)
-        abline(v=seq(12, 84, by=12) + 0.5, col="gray80")
-        points(z, pch=19, col="tomato", cex=0.65)
-        abline(h=5)
     }
     
     par(op)

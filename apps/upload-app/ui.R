@@ -7,7 +7,7 @@ library(DT)
 library(shinyFiles)
 
 # set app directory
-app_dir = "/Users/kwameokrah/sanavia_apps/checkR/apps/order-recvd/"
+app_dir = paste0(getwd(), "/")
 
 # load helper function
 helper_funcs_dir = paste0(app_dir, "code")
@@ -25,7 +25,7 @@ theme = bslib::bs_theme(version = 5,
                         nav_link_font_size = "16px !important")
 
 bslib::page_navbar(
-
+    
     title = tagList(
         tags$img(
             src = "img/sanavia_cream.png",
@@ -34,11 +34,12 @@ bslib::page_navbar(
         ),
         ""
     ),
-
+    
     padding = 0,
     theme = theme,
     underline = FALSE,
     footer = footer_section(),
-
+    
     application_page
 )
+

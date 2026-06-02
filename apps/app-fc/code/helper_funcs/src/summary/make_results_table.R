@@ -1,7 +1,7 @@
 # Kwame Okrah
 # 2026-03-08
 
-make_results_table = function(gres_list, pinfos, author_gating = "unknown") {
+make_results_table = function(gres_list, pinfos, author_gating="unknown") {
     hold = list()
     for (k in names(gres_list)) {
         gres = gres_list[[k]]

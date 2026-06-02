@@ -2,10 +2,16 @@
 # date: 2026-03-04
 
 server = function(input, output, session) {
+    #------------------------------ step 0: on start
+    # get app directory
     app_dir = paste0(getwd(), "/")
     
-    folder_path = "/Users/kwameokrah/data_depo"
+    # set path to fixed data source
+    dotenv::load_dot_env("~/.env_data_ingestion_apps")
+    folder_path = Sys.getenv("DATA_DIR")
     
+    # get paths of files in folder_path and organize by project;
+    # filtered to only projects with a qc report "qc_report/.*merged-data.csv$"
     project_paths = tryCatch(
         get_paths_by_project2(folder_path),
         error = function(e) {
@@ -14,12 +20,10 @@ server = function(input, output, session) {
         }
     )
     
-    
-    
+    # make front page table
     input_react_vals = reactiveValues()
     
     observe({
-        
         table_front_page = tryCatch(
             front_page_table2(project_paths, "fcs"),
             error = function(e) {
@@ -48,7 +52,8 @@ server = function(input, output, session) {
         insert_me1 = tags$div(
             tags$p("Select A Project",
                    class="h3 text-primary fw-bold text-center"),
-            tags$p("Click on a row to select project and proceed to automatically gate",
+            tags$p("Click on a row to select project and proceed to 
+                   automatically gate",
                    class="h6 text-secondary text-center"),
             fluidRow(
                 selectInput("proj_group",
@@ -82,24 +87,24 @@ server = function(input, output, session) {
             )
         )
         
-        
-        
         input_react_vals$table_front_page = table_front_page
     })
     
+    
+    #------------------------------ step 1: select a project
     observe({
         if (!is.null(input$projects_table_rows_selected)) {
             updateActionButton(session, "load_project", disabled=FALSE)
         }
-        
-        print(input$projects_table_rows_selected)
+
     }) |> bindEvent(input$projects_table_rows_selected)
     
     observe({
         if (isTruthy(input$load_project)) {
             removeUI(selector = "#main_contents1")
         }
-        
+    
+        # filter to match front table    
         table_front_page = input_react_vals$table_front_page
     
         sel = rep(TRUE, nrow(table_front_page))
@@ -111,15 +116,14 @@ server = function(input, output, session) {
         }
         table_front_page_sub = table_front_page[sel,]
         
+        # select project
         k = input$projects_table_rows_selected
-        
         selected_project = table_front_page_sub[k, "Project Name"]
         
+        # read in fcs files
         path_list = project_paths[[selected_project]]
         paths = c(path_list[["assay_data"]], path_list[["qc_report"]])
         
-        
-        # Read FCS data
         res = tryCatch({
             withProgress(message = "Reading FCS files...", value = 0.6, {
                 r = read_data(paths)
@@ -131,7 +135,7 @@ server = function(input, output, session) {
             return(error_msg)
         })
         
-
+        # insert selected project ui
         insertUI(
             selector = "#load_project",
             where = "afterEnd",
@@ -145,37 +149,30 @@ server = function(input, output, session) {
         
         removeUI(selector = "#load_project")
         
-        
+        # make summary graphs before gating
         pinfos = res[["pinfos"]]
         fcs_files = res[["fcs_files"]]
         
-        input_react_vals$pinfos = pinfos
-        input_react_vals$fcs_files = fcs_files
-        
-        # Step 3: Summarize total events data — used to be gated behind a
-        # "Proceed" click; now runs straight after a successful project load.
         tab = summary_events(pinfos$Result, "Total Events")
         output$stat_summary_box = renderPrint({ tab })
         
         tlgs_dir = paste0(app_dir, "www/docs/tlgs/")
-
         file_path = paste0(tlgs_dir, "plate-events-fig.pdf")
-
         plot_plate_events(pinfos, is_gated = FALSE, fig_path = file_path)
 
-        # events boxplot
         output$plot = renderPlot({
             events_boxplot(pinfos$Result)
         })
         
-        # column1
+        # define column1 insert
         insert_me1 = tags$div(
             id = "ref_sample_gating_div",
             tags$div(
                 id = "ref_sample_gating_div2",
                 tags$p("Optimal Viability Gate Detection",
                        class="h5 text-primary fw-bold"),
-                tags$p("Computationaly determine optimal gates for all samples up to viabliliy.",
+                tags$p("Computationaly determine optimal gates for all 
+                       samples up to viabliliy.",
                        class="text-secondary")
             ),
             tags$div(
@@ -186,16 +183,13 @@ server = function(input, output, session) {
             )
         )
         
-        # column2
+        # define column2 insert
         insert_me2 = tags$div(
             id = "gating_summary_div",
-            
             tags$div(
                 class="row",
-                
                 tags$p("Total Number of Events (Not Gated)",
                        class="h5 text-secondary fw-bold"),
-                
                 tags$div(
                     style="height: 340px",
                     tags$iframe(
@@ -204,45 +198,38 @@ server = function(input, output, session) {
                         height="100%"
                     )
                 ),
-                
                 tags$p("Each page corresponds to a single plate.",
                        class="text-secondary")
             ),
-            
             tags$div(
                 class="row",
-                
                 tags$div(
                     class="row",
                     tags$div(plotOutput("plot", height = "110px"))
                 ),
-                
                 tags$div(
                     class="row",
                     tags$div(
                         style = "width: 100%;",
-                        verbatimTextOutput("stat_summary_box", placeholder = TRUE)
+                        verbatimTextOutput("stat_summary_box", placeholder=TRUE)
                     )
                 )
             )
         )
         
+        # implement inserts
         insertUI(
             selector = "#main_contents",
             where = "afterEnd",
-            
             ui = tags$div(
                 id = "main_contents1",
-                
                 tags$div(
                     class="row",
-                    
                     tags$div(
                         class="col",
                         id = "main_contents_col1",
                         insert_me1
                     ),
-                    
                     tags$div(
                         class="col",
                         id = "main_contents_col2",
@@ -255,13 +242,18 @@ server = function(input, output, session) {
             )
         )
         
-        
-        path2_proj_folder = sapply(strsplit(paths[1], selected_project), "[[", 1)
+        # save relevant info. 
+        input_react_vals$pinfos = pinfos
+        input_react_vals$fcs_files = fcs_files
+        path2_proj_folder = sapply(strsplit(paths[1], selected_project), 
+                                   "[[", 1)
+        path2_proj_folder = paste0(path2_proj_folder, selected_project, "/")
         input_react_vals$path2_proj_folder = path2_proj_folder
         
     }) |> bindEvent(input$load_project)
     
-    # Step 4: Automatically gate up to viability
+    
+    #------------------------------ step 4: gate up to viability
     optimal_verts_react_vals = reactiveValues()
     
     observe({
@@ -269,13 +261,8 @@ server = function(input, output, session) {
             removeUI(selector = "#ref_sample_gating_div2")
             removeUI(selector = "#automatic_gate_div")
         }
-        
-        # Checkpoint: skip if already computed. Re-clicking the button
-        # otherwise stacks duplicate #auto_viability_gate_results divs and
-        # re-runs the expensive fit. clear_app_state() nulls $verts on new
-        # project load, so this resets naturally.
-        if (!is.null(optimal_verts_react_vals$verts)) return()
-        
+
+        # compute optimal vertices
         optimal_vertices_res = withProgress(
             message = "Computing optimal gates...", value = 0, {
                 # select reference samples
@@ -308,9 +295,10 @@ server = function(input, output, session) {
         verts = optimal_vertices_res[["optim_verts_list"]]
         default_ch = optimal_vertices_res[["default_ch"]]
         
-        # MFI channel comes from the project metadata
+        # set mfi channel
         default_ch["ab+", "x_ch"] = pinfos[["mfi_channel"]][1]
         
+        # gate reference samples
         gres_list_refs = list()
         n_total = length(fcs_refs)
         
@@ -321,12 +309,12 @@ server = function(input, output, session) {
             result = tryCatch({
                 gate2_viability(mat, default_ch, verts)
             }, error = function(e) {
-                log_error(paste0("gate2_viability [", k, "]"), e)
                 NA
             })
             gres_list_refs[[k]] = result
         }
         
+        # plot ref. gating results
         output$plot_vertices = renderPlot({
             sample_profile_plot(1, gres_list_refs, FALSE)
         })
@@ -355,23 +343,18 @@ server = function(input, output, session) {
                          class="text-secondary")
         }
         
-        
         insertUI(
             selector = "#ref_sample_gating_div", 
             where = "afterEnd",
             ui = tags$div(
                 id = "auto_viability_gate_results",
-                
                 tags$p("Inspect gating for selected samples", 
                        class="h5 text-primary fw-bold"),
-                
                 msg,
                 si,
-                
                 tags$div(
                     id = "ref_clycle_plot_divs_top"
                 ),
-                
                 tags$div(
                     id = "ref_clycle_plot_divs",
                     tags$p(names(fcs_refs)[1], 
@@ -380,9 +363,7 @@ server = function(input, output, session) {
                         tags$div(plotOutput("plot_vertices", height = "225px"))
                     ),
                 ),
-                
                 tags$br(),
-                
                 tags$p("Continue", 
                        class="h5 text-primary"),
                 tags$p("Proceed to gate all samples or adjust the gates.",
@@ -401,6 +382,7 @@ server = function(input, output, session) {
             )
         )
         
+        # save results
         optimal_verts_react_vals$optimal_vertices_res = optimal_vertices_res
         optimal_verts_react_vals$gres_list_refs = gres_list_refs
         optimal_verts_react_vals$n_total = n_total
@@ -408,8 +390,7 @@ server = function(input, output, session) {
         
     }) |> bindEvent(input$automatic_gate)
     
-    
-    # Step 4a
+    # cycle through gated reference samples 
     observe({
         if (isTruthy(input$reference_samples)) {
             removeUI(selector = "#ref_clycle_plot_divs")
@@ -427,30 +408,26 @@ server = function(input, output, session) {
         insertUI(
             selector = "#ref_clycle_plot_divs_top", 
             where = "afterEnd",
-            
             ui = tags$div(
                 id = "ref_clycle_plot_divs",
                 tags$p(names(fcs_refs)[k], 
                        class="h6 text-secondary"),
                 tags$div(
                     tags$div(plotOutput("plot_vertices", height = "225px"))
-                ),
+                )
             )
         )
         
     }) |> bindEvent(input$reference_samples)
     
-    
-    # Step 4b: manually gate
+    # manually gate
     observe({
         if (isTruthy(input$manually_gate)) {
             removeUI(selector = "#main_contents1")
             removeUI(selector = "#main_contents2")
         }
         
-        # fcs_files = input_react_vals$fcs_files
         optimal_vertices_res = optimal_verts_react_vals$optimal_vertices_res
-        # gres_list_refs = optimal_verts_react_vals$gres_list_refs
         n_total = optimal_verts_react_vals$n_total
         fcs_refs = optimal_verts_react_vals$fcs_refs
         
@@ -640,7 +617,7 @@ server = function(input, output, session) {
         
     }) |> bindEvent(input$manually_gate)
     
-    
+    # refresh gates
     observe({
         if (isTruthy(input$refresh_gates)) {
             removeUI(selector="#ref_clycle_plot_divs")
@@ -654,10 +631,10 @@ server = function(input, output, session) {
         verts = optimal_vertices_res[["optim_verts_list"]]
         default_ch = optimal_vertices_res[["default_ch"]]
         
-        # MFI channel comes from the project metadata
+        # update mfi_channel
         default_ch["ab+", "x_ch"] = pinfos[["mfi_channel"]][1]
         
-        #--------------------- update verts: start
+        # update verts: start
         # intact
         intact_width = input$intact_width
         intact_height = input$intact_height
@@ -692,7 +669,6 @@ server = function(input, output, session) {
         verts$viable["B", "x"] = viable_line[1]
         
         #--------------------- update verts: end
-        
         gres_list_refs = list()
         n_total = length(fcs_refs)
         
@@ -703,7 +679,6 @@ server = function(input, output, session) {
             result = tryCatch({
                 gate2_viability(mat, default_ch, verts)
             }, error = function(e) {
-                log_error(paste0("gate2_viability [", k, "]"), e)
                 NA
             })
             gres_list_refs[[k]] = result
@@ -714,7 +689,6 @@ server = function(input, output, session) {
         }else{
             k = input$reference_samples
         }
-        
         
         output$plot_vertices = renderPlot({
             sample_profile_plot(k, gres_list_refs, FALSE)
@@ -741,7 +715,8 @@ server = function(input, output, session) {
         
     }) |> bindEvent(input$refresh_gates)
     
-    # Step 5: Gate all samples
+    
+    #------------------------------ step 5: gate all samples
     gated_fcs_files = reactiveValues()
     
     observe({
@@ -771,7 +746,6 @@ server = function(input, output, session) {
                 result = tryCatch({
                     gate2_viability(mat, default_ch, verts)
                 }, error = function(e) {
-                    log_error(paste0("gate2_viability [", k, "]"), e)
                     NA
                 })
                 gres_list[[k]] = result
@@ -780,9 +754,12 @@ server = function(input, output, session) {
             }
         })
         
-
+        author_gating = paste0(Sys.info()[["user"]], 
+                               " | ",
+                               Sys.info()[["nodename"]])
+        
         results_table = make_results_table(gres_list, pinfos,
-                                           author_gating = "ko")
+                                           author_gating = author_gating)
 
         tab = summary_viable_events(results_table)
         output$stat_summary_viable_box = renderPrint({ tab })
@@ -790,12 +767,10 @@ server = function(input, output, session) {
         # plot total viable events
         tlgs_dir = paste0(app_dir, "www/docs/tlgs/")
         file_path1 = paste0(tlgs_dir, "plate-viable-events-fig.pdf")
-
         plot_plate_events(results_table, is_gated = TRUE, fig_path=file_path1)
 
         # plot mfi
         file_path2 = paste0(tlgs_dir, "plate-viable-mfi-fig.pdf")
-
         plot_mfi(results_table, fig_path=file_path2)
 
         # events boxplot
@@ -889,6 +864,7 @@ server = function(input, output, session) {
             )
         )
 
+        # implement inserts
         insertUI(
             selector = "#main_contents",
             where = "afterEnd",
@@ -917,12 +893,14 @@ server = function(input, output, session) {
             )
         )
 
+        # save results
         gated_fcs_files$results_table = results_table
         gated_fcs_files$gres_list = gres_list
         
     }) |> bindEvent(input$gate_all)
     
-    # Step 6: Annotation page
+    
+    #------------------------------ step 6: Annotation page
     annot_react_vals = reactiveValues()
 
     observe({
@@ -1000,7 +978,8 @@ server = function(input, output, session) {
         output$samples_noted_ui = renderUI({
             tbl = as.data.frame(table(Note))
             tags$pre(paste0("Samples noted:\n",
-                            paste(capture.output(print(tbl, row.names = FALSE)), collapse = "\n")))
+                            paste(capture.output(print(tbl, row.names = FALSE)), 
+                                  collapse = "\n")))
         })
 
         # column2
@@ -1058,19 +1037,15 @@ server = function(input, output, session) {
         insertUI(
             selector = "#main_contents",
             where = "afterEnd",
-
             ui = tags$div(
                 id = "main_contents1",
-
                 tags$div(
                     class="row",
-
                     tags$div(
                         class="col",
                         id = "main_contents_col1_annot",
                         insert_me1
                     ),
-
                     tags$div(
                         class="col",
                         id = "main_contents_col2_annot",
@@ -1082,13 +1057,12 @@ server = function(input, output, session) {
 
     }) |> bindEvent(input$review_board)
 
-    
-    # Shared filtered table reactive
+    # shared filtered table reactive
     filtered_table = reactive({
         data = annot_react_vals$display_table
         req(data)
 
-        # Add annotation status column
+        # add annotation status column
         av = annot_react_vals$annot_vector
         note = rep("Keep", nrow(data))
         names(note) = rownames(data)
@@ -1107,7 +1081,7 @@ server = function(input, output, session) {
         data
     })
 
-    output$table <- DT::renderDT({
+    output$table = DT::renderDT({
         dt = filtered_table()
         note_col = which(colnames(dt) == ".note") - 1  # 0-indexed
         DT::datatable(dt,
@@ -1129,8 +1103,8 @@ server = function(input, output, session) {
                                }", note_col))
                       ))
     }, server = FALSE)
-
-    # 7. Sample Profile
+    
+    # sample profile
     observe({
         if (isTruthy(input$table_rows_selected)) {
             removeUI(selector = "#plot_sample_profile_div")
@@ -1188,16 +1162,19 @@ server = function(input, output, session) {
         output$samples_noted_ui = renderUI({
             tbl = as.data.frame(table(Note))
             tags$pre(paste0("Samples noted:\n",
-                            paste(capture.output(print(tbl, row.names = FALSE)), collapse = "\n")))
+                            paste(capture.output(print(tbl, row.names = FALSE)), 
+                                  collapse = "\n")))
         })
 
     }) |> bindEvent(input$annotate_smpl)
     
     
-    
-    
-    
+    #-------------------------------- save and exit
     observe({
+        
+        if (isTruthy(input$save_exit)) {
+            removeUI(selector = "#main_contents1")
+        }
         
         results_table = gated_fcs_files$results_table
         
@@ -1210,17 +1187,16 @@ server = function(input, output, session) {
             to_drop[names(annot_vector0)] = annot_vector0
         }
         results_table$to_drop = to_drop
-        
-        
-        
+
         data_path = input_react_vals$path2_proj_folder
-        gating_results_fldr = paste0(data_path, "/gating_results")
+        gating_results_fldr = paste0(data_path, "gating_results")
         reset_dir(gating_results_fldr)
+    
+        print(gating_results_fldr)
         
-        gate_file_name = paste0(Sys.Date(), "-gated-results.csv")
+        gate_file_name = "gated-results.csv"
         gate_file_path = paste0(gating_results_fldr, "/", gate_file_name)
         write.csv(results_table, file = gate_file_path, row.names = FALSE)
-        
         
         # save optim_verts_list
         optimal_vertices_res = optimal_verts_react_vals$optimal_vertices_res
@@ -1231,14 +1207,69 @@ server = function(input, output, session) {
         }
         verts_mat = do.call(rbind, verts_)
         
-        verts_file_name = paste0(Sys.Date(), "-polygon-vertices.csv")
+        verts_file_name = "polygon-vertices.csv"
         verts_file_path = paste0(gating_results_fldr, "/", verts_file_name)
         write.csv(verts_mat, file = verts_file_path, row.names = F)
         
+        # exit page
+        insert_me1 = tags$div(
+            tags$p("Done",
+                   class="h5 text-secondary fw-bold"),
+            tags$p("Gated results are in the project folder.
+                    Go back to the home page or proceed to gate another project.",
+                   class="text-seconday"),
+            actionButton(
+                "reload_app",
+                "Gate another project",
+                class="btn-primary"
+            )
+        )
+        
+        insertUI(
+            selector = "#main_contents",
+            where = "afterEnd",
+            ui = tags$div(
+                id = "main_contents1",
+                tags$div(
+                    class="row",
+                    tags$div(
+                        class="col",
+                        id = "main_contents_col1_annot",
+                        insert_me1
+                    ),
+                    tags$div(
+                        class="col",
+                        id = "main_contents_col2_annot",
+                    )
+                )
+            )
+        )
+        
+        # clear tlgs folder in app
+        TLGs_FLS = list.files(paste0(app_dir, "www/docs/tlgs"), full.names=T)
+        if (length(TLGs_FLS) > 0) {
+            for (fl in TLGs_FLS) {
+                file.remove(fl)    
+            }
+        }
+        
+        # copy to gdrive
+        GDRIVE_DIR = Sys.getenv("GDRIVE_DIR")
+        GDRIVE_DIR_SAVE = paste0(GDRIVE_DIR, 
+                                 gsub(folder_path, "", gating_results_fldr))
+        GDRIVE_DIR_SAVE = gsub("gating_results", "", GDRIVE_DIR_SAVE)
+        
+        if (!dir.exists(GDRIVE_DIR_SAVE)) {
+            dir.create(GDRIVE_DIR_SAVE, recursive = TRUE)
+        }
+        
+        sys_cmp = paste0("cp -r ", gating_results_fldr, " ", GDRIVE_DIR_SAVE)
+        system(sys_cmp)
         
     }) |> bindEvent(input$save_exit)
     
-    
-    
-
+    # reload
+    observe({
+        session$reload()
+    }) |> bindEvent(input$reload_app)
 }

@@ -798,7 +798,7 @@ assay_data_plot = function(plate_name, merge_info, approved = FALSE) {
         
         if (!is.na(x[i])) {
             z = abs(y - x[i])
-            canvas_col[row_ind, col_ind] = col_key[as.character(y[z == min(z)])]
+            canvas_col[row_ind, col_ind] = col_key[as.character(y[z == min(z)])][1]
             x_i = x[i]
             if (result_type %in% c("normalized AUC")) {
                 x_i = sprintf(x_i, fmt="%0.2f")
@@ -810,7 +810,6 @@ assay_data_plot = function(plate_name, merge_info, approved = FALSE) {
             canvas[row_ind, col_ind] = NA
             canvas_text_col[row_ind, col_ind] = NA
         }
-
     }
 
     canvas[is.na(canvas)] = "NA"
@@ -923,7 +922,7 @@ approved_qc_report = function(data_path,
                               dose_type = "none",
                               notes="none") {
     
-    fig_path = paste0(data_path, "/", Sys.Date(), "-qc-report.pdf")
+    fig_path = paste0(data_path, "/qc-report.pdf")
     make_qc_report(pinfo_sheets, merge_info, fig_path, approved=TRUE)
 
     if (is.null(merge_info)) {
@@ -942,6 +941,6 @@ approved_qc_report = function(data_path,
     merged_data$dose_type = dose_type
     merged_data$notes = notes
     
-    table_path = paste0(data_path, "/", Sys.Date(), "-merged-data.csv")
+    table_path = paste0(data_path, "/merged-data.csv")
     write.csv(merged_data, file=table_path, row.names=FALSE)
 }
