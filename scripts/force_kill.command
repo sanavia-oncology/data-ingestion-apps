@@ -1,1 +1,1 @@
-for p in 3001 3002 3003; do kill $(lsof -t -i :$p) 2>/dev/null; done
+for p in 3001 3002 3003 3004; do kill $(lsof -t -i :$p) 2>/dev/null; done
