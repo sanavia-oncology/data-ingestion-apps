@@ -1,86 +1,74 @@
 # Kwame Okrah
 # 2026-05-29
 
-get_paths_by_project2 = function(project_fldr, assay_type) {
+
+results_summary_list = function(project_fldr) {
     
     all_files = list.files(project_fldr, 
                            recursive=TRUE, 
                            full.names=TRUE)
     
-    qcr_folders = all_files[grep("qc_report/.*merged-data.csv$", all_files)]
-    qcr_folders = sapply(strsplit(qcr_folders, "qc_report"), "[[", 1)
-    proj_folders = sapply(strsplit(qcr_folders, "/"), function(x) x[length(x)])
-    proj_folders = unique(proj_folders)
+    results_files = all_files[grep("gated-results.csv$", all_files)]
     
-    hold = list()
-    for (k in proj_folders) {
-        tmp = all_files[grep(k, all_files)]
-        pinfos = tmp[grep("plate_information_sheets", tmp)]
-        assay_data = tmp[grep("assay_data", tmp)]
-        qc_report = tmp[grep("qc_report", tmp)]
-        gating_results = tmp[grep("gating_results", tmp)]
-        
-        if (length(grep("pinfo.csv", pinfos)) > 0) {
-            hold[[k]] = list(pinfos=pinfos, 
-                             assay_data=assay_data,
-                             qc_report=qc_report,
-                             gating_results=gating_results)    
+    if (length(results_files) > 0) {
+        hold = list()
+        hold_cls = list()
+        hold_probes = list()
+        for (fl in results_files) {
+            tmp = read.csv(fl, header = T, check.names = F)
+            nsmpls = nrow(tmp)
+            mfi_channel = tmp$mfi_channel[1]
+            dose_type = tmp$dose_type[1]
+            cls = sort(unique(tmp$"Target Spec ID"))
+            ncells = length(cls)
+            uprobes = unique(tmp$"Probe ID")
+            nprobes = length(uprobes)
+            nplates = length(unique(tmp$Platename))
+            author_exp = tmp$author_exp[1]
+            author_qc = tmp$author_qc[1]
+            author_gating = tmp$author_gating[1]
+            uconc = unique(tmp$`Probe Quant Value`)
+            rng = range(as.numeric(uconc))
+            crng = paste0("[", paste0(rng, collapse = ", "), "]")
+            
+            fl_ = gsub(project_fldr, "", fl)
+            fl_ = strsplit(fl_, "/")
+            proj_group = sapply(fl_, "[[", 2)
+            proj_name = sapply(fl_, "[[", 3)
+            
+            file_metadata = file.info(fl)
+            creation_time = sapply(strsplit(as.character(file_metadata$ctime), 
+                                            "\\ "), "[[", 1)
+            
+            res = c(date_created=creation_time,
+                    project_group=proj_group,
+                    project_name=proj_name,
+                    project_desc="Not available yet",
+                    results_n=nsmpls,
+                    dose_type=dose_type,
+                    cell_type_n=ncells,
+                    probe_n=nprobes,
+                    mfi_channel=mfi_channel,
+                    full_path=fl)
+            
+            hold[[fl]] = res 
+            hold_cls[[fl]] = cls
+            hold_probes[[fl]] = uprobes
         }
+        
+        tab = do.call(rbind, hold)
+        tab = as.data.frame(tab)
+        rownames(tab) = NULL
+        res = list(front_page_table=tab, 
+                   unique_cell_lines=hold_cls,
+                   unique_probes=hold_probes,
+                   author_exp=author_exp,
+                   author_qc=author_qc,
+                   author_gating=author_gating,
+                   "conc [min, max] (ug/ml)"=crng,
+                   plates_n=nplates)
+        return(res)
+    }else{
+        return(NA)
     }
-    
-    return(hold)
 }
-
-
-front_page_table3 = function(project_paths, assay_type) {
-    hold = list()
-    
-    for (k in names(project_paths)) {
-        x = project_paths[[k]]
-        
-        pinfos_paths = x[["pinfos"]][grep("pinfo.csv", x[["pinfos"]])]
-        n_pinfos = length(pinfos_paths)
-        n_assays = length(grep(assay_type, x[["assay_data"]]))
-        # n_qcrepo = length(grep("merged-data.csv$", x[["qc_report"]]))
-        n_gatres = length(grep("gated-results.csv$", x[["gating_results"]]))
-        
-        proj_group = sapply(strsplit(pinfos_paths[1], k), "[[", 1)
-        proj_group = sapply(strsplit(proj_group, "/"), function(x) x[length(x)])
-        
-        ctime = as.Date(sort(file.info(pinfos_paths)$mtime)[1])
-        if (n_gatres > 0) {
-            is_gated = "Yes"  
-        }else{
-            is_gated = "No"
-        } 
-        
-        p = list()
-        gs = x[["gating_results"]][grep("gated-results.csv$", x[["gating_results"]])]
-        for (fl in gs) {
-            p_ = read.csv(fl, header=T, check.names = F)
-            p[[fl]] = unique(p_$dose_type)
-        }
-
-        dose_type = paste0(unique(unlist(p)), collapse = " / ")
-        
-        hold[[k]] = data.frame("Date Created"=ctime,
-                               "Project Group"=proj_group,
-                               "Project Name"=k, 
-                               "Plate Sheets"=n_pinfos,
-                               "FCS Files"=n_assays,
-                               "Is Gated"=is_gated,
-                               "Dose Type"=dose_type,
-                               check.names = FALSE)
-    }
-    
-    hold = do.call(rbind, hold)
-    rownames(hold) = NULL
-    
-    o = order(hold[["Date Created"]], decreasing = T)
-    hold = hold[o,,drop=FALSE]
-    
-    rownames(hold) = NULL
-    
-    return(hold)
-}
-
