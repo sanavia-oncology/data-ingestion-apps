@@ -1,7 +1,6 @@
 # Kwame Okrah
 # 2026-05-29
 
-
 results_summary_list = function(project_fldr) {
     
     all_files = list.files(project_fldr, 

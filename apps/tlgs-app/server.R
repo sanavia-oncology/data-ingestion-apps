@@ -2,7 +2,6 @@
 # date: 2026-03-04
 
 server = function(input, output, session) {
-    #------------------------------ step 0: on start
     # get app directory
     app_dir = paste0(getwd(), "/")
     
@@ -11,23 +10,24 @@ server = function(input, output, session) {
     
     # make folders in TLGS_DIR
     tlgs_path = Sys.getenv("TLGS_DIR")
-    tlgs_path_tmp = paste0(tlgs_path, "/", Sys.Date())
+    stamp = Sys.Date()
+    tlgs_path_tmp = paste0(tlgs_path, "/", stamp, "/")
     
     if (!dir.exists(tlgs_path_tmp)) {
         dir.create(tlgs_path_tmp)
     }
     
-    tlgs_path_tmp_dict = paste0(tlgs_path_tmp, "/dict")
+    tlgs_path_tmp_dict = paste0(tlgs_path_tmp, "dict/")
     if (!dir.exists(tlgs_path_tmp_dict)) {
         dir.create(tlgs_path_tmp_dict)
     }
     
-    tlgs_path_tmp_data = paste0(tlgs_path_tmp, "/data")
+    tlgs_path_tmp_data = paste0(tlgs_path_tmp, "data/")
     if (!dir.exists(tlgs_path_tmp_data)) {
         dir.create(tlgs_path_tmp_data)
     }
     
-    tlgs_path_tmp_tlgs = paste0(tlgs_path_tmp, "/tlgs")
+    tlgs_path_tmp_tlgs = paste0(tlgs_path_tmp, "tlgs/")
     if (!dir.exists(tlgs_path_tmp_tlgs)) {
         dir.create(tlgs_path_tmp_tlgs)
     }
@@ -205,11 +205,13 @@ server = function(input, output, session) {
         
         # write dicts
         write.csv(probe_dict,
-                  file=paste0(tlgs_path_tmp_dict, "/probe_dict.csv"),
+                  file=paste0(tlgs_path_tmp_dict, stamp, 
+                              "_probe_dict.csv"),
                   row.names=FALSE)
         
         write.csv(target_spec_dict,
-                  file=paste0(tlgs_path_tmp_dict, "/target_spec_dict.csv"),
+                  file=paste0(tlgs_path_tmp_dict, stamp, 
+                              "_target_spec_dict.csv"),
                   row.names=FALSE)
         
         # probe dict table
@@ -981,7 +983,8 @@ server = function(input, output, session) {
         project_data = cbind(dat, display_table)
         
         write.csv(project_data,
-                  file=paste0(tlgs_path_tmp_data, "/project_data.csv"),
+                  file=paste0(tlgs_path_tmp_data, stamp, 
+                              "_project_data.csv"),
                   row.names=FALSE)
         
         input_react_vals$project_data = project_data
@@ -997,7 +1000,8 @@ server = function(input, output, session) {
         target_order_vals$target_dict_order = target_dict_download
         
         write.csv(target_dict_download,
-                  file=paste0(tlgs_path_tmp_data, "/target_spec_order.csv"),
+                  file=paste0(tlgs_path_tmp_data, stamp,
+                              "_target_spec_order.csv"),
                   row.names=FALSE)
         
         output$target_dict_download1 = DT::renderDataTable(DT::datatable({
@@ -1145,7 +1149,7 @@ server = function(input, output, session) {
 
     }) |> bindEvent(input$proceed_to_analysis)
 
-    # order_targetsbutton
+    # order_targets button
     observe({
         if(!is.null(input$targert_order_file)) {
             updateActionButton(session, "order_targets", disabled=FALSE) 
@@ -1186,6 +1190,7 @@ server = function(input, output, session) {
     }) |> bindEvent(input$order_targets)
     
     # process data and generate the PDFs first
+    tlgs_react_vals = reactiveValues()
     observe({
         if (!is.null(input$analysis_type)) {
             if (input$analysis_type != "None") {
@@ -1215,36 +1220,55 @@ server = function(input, output, session) {
             levels = target_spec_levels
         )
         
-        # Generate PDFs synchronously 
+        pa = get_probe_annotation(project_data)
+        
+        # generate PDFs synchronously 
+        fig1_path = paste0(tlgs_path_tmp_tlgs, 
+                           stamp,
+                           "_01-fig_basic_heatmap.pdf")
+        pdf(fig1_path, width = 8.25, height = 11)
+        
         if (input$analysis_type == "Probe x Cell Lines") {
-            res_s     <- prep_single_dose_data(project_data)
-            fig1_path <- paste0(tlgs_path_tmp_tlgs, "/01-probe_by_cell_heatmap.pdf")
-            
-            pdf(fig1_path, width = 8.25, height = 11)
-            single_dose_tlgs(res_s, v = 1)
-            dev.off() # Strict execution barrier; file is written completely here
+            res_s = prep_single_dose_data(project_data)
+            tab = single_dose_tlgs(res_s, v = 1)
         }
         
         if (input$analysis_type == "Probe x Conc") {
-            res_m     <- prep_multi_dose_data(project_data)
-            fig1_path <- paste0(tlgs_path_tmp_tlgs, "/01-probe_by_conc_heatmap.pdf")
-            
-            pdf(fig1_path, width = 8.25, height = 11)
-            titration_tlgs(res_m)
-            dev.off() # Strict execution barrier; file is written completely here
+            res_t = prep_multi_dose_data(project_data)
+            tab = titration_tlgs(res_t)
         }
         
-        # Return a success flag when everything above is finished
+        dev.off()
+
+        tlgs_react_vals$project_data = project_data
+        
+        fig1_copy = paste0(app_dir, "www/docs/tlgs/01-fig_basic_heatmap.pdf")
+        sys_call = paste0("cp ",  fig1_path, " ", fig1_copy)
+        system(sys_call)
+        
+        tab[,"annotation"] = pa[tab[,"probe_name"]]
+    
+        tlgs_react_vals$tab = tab
+        
+        write.csv(tab,
+                  file = paste0(tlgs_path_tmp_tlgs, 
+                                stamp, "_01-tab_basic_table.csv"),
+                  row.names = F)
+        
+        # return a success flag when everything above is finished
         return(TRUE)
     })
     
     # insert the UI button ONLY after the PDF step returns TRUE
     observeEvent(pdf_generation_status(), {
         # This block will not run until pdf_generation_status() evaluates and completes
+        removeUI(selector="#view_tlgs_div")
+        
         insertUI(
             selector = "#proceed_to_TLGs",
             where = "afterEnd",
             ui = tags$div(
+                id="view_tlgs_div",
                 class = "row",
                 tags$p(""),
                 tags$br(),
@@ -1269,7 +1293,7 @@ server = function(input, output, session) {
         )
     })
     
-    # view tlgs
+    # view tlgs page
     observe({
         if (isTruthy(input$proceed_to_TLGs)) {
             removeUI(selector = "#main_contents1")
@@ -1281,11 +1305,20 @@ server = function(input, output, session) {
                 class="row",
                 tags$div(
                     id = "ref_probe_id_div2",
-                    tags$p("Table",
+                    tags$p(paste0(input$analysis_type, " Table"),
                            class="h5 text-primary fw-bold")
                 )
             ),
-            "table",
+            "stuff here"
+        )
+        
+        basic_heatmap = tags$div(
+            style="height: 970px",
+            tags$iframe(
+                src = "docs/tlgs/01-fig_basic_heatmap.pdf#zoom=50",
+                width="80%",
+                height="60%"
+            )
         )
         
         insert_me2 = tags$div(
@@ -1294,11 +1327,11 @@ server = function(input, output, session) {
             tags$div(
                 tags$div(
                     id = "ref_probe_id_div2",
-                    tags$p("Graphs",
+                    tags$p(paste0(input$analysis_type, " Heatmap"),
                            class="h5 text-primary fw-bold")
-                )
+                ),
+                basic_heatmap,
             ),
-            "graphs",
         )
         
         insertUI(

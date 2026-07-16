@@ -29,9 +29,22 @@ prep_single_dose_data = function(project_data) {
     return(res)
 }
 
-prep_multi_dose_data  = function(dat) {
+prep_multi_dose_data  = function(project_data) {
     res = split(project_data, project_data$"target_spec_name")
     return(res)
+}
+
+get_probe_annotation = function(project_data) {
+    annotation_list = split(project_data$annotation, project_data$probe_name)
+    f = function(x) {
+        check_vec = x %in% "None"
+        if (all(check_vec)) {
+            return("None")
+        }else{
+            return(unique(x[!check_vec]))
+        }
+    }
+    sapply(annotation_list, f)
 }
 
 ncut_ti = 40
@@ -92,6 +105,7 @@ titration_hmap = function(dat,
         grid.text(msg, x=0.5, y=0.98, gp=gpar(fontsize=10))
     }
 
+    return(MAT)
 }
 
 titration_sample_size = function(dat, 
@@ -185,7 +199,6 @@ single_dose_hmap1 = function(dat,
         if (sum(s_==s_[ls_]) == 1) s_[ls_] = s_[ls_ - 1]
     }
     
-    
     mat_list = split(as.data.frame(MAT), s_)
     lm_ = length(mat_list)
     for (i in 1:lm_) {
@@ -212,6 +225,7 @@ single_dose_hmap1 = function(dat,
         grid.text(msg, x=0.5, y=0.98, gp=gpar(fontsize=10))
     }
     
+    return(MAT)
 }
 
 single_dose_sample_size1 = function(dat,
@@ -331,6 +345,7 @@ single_dose_hmap2 = function(dat,
         grid.text(msg, x=0.5, y=0.98, gp=gpar(fontsize=10))
     }
     
+    return(MAT)
 }
 
 single_dose_sample_size2 = function(dat,
@@ -406,9 +421,18 @@ titration_tlgs = function(res_t) {
     text(0, 0, msg, cex=1.5)
     par(op)
     
+    hold = list()
     for (cell in names(res_t)) {
-        titration_hmap(res_t[[cell]], cell)    
+        res = titration_hmap(res_t[[cell]], cell)
+        colnames(res) = paste0(colnames(res), " (ug/ml)")
+        df = data.frame("target_spec"=rep(cell, nrow(res)),
+                        probe_name=rownames(res),
+                        check.names = F)
+        df = cbind(df, round(res))
+        hold[[cell]] = df  
     }
+    hold = do.call(rbind, hold)
+    rownames(hold) = NULL
     
     # sample size
     op = par(mar=c(3, 3, 3, 3))
@@ -419,6 +443,8 @@ titration_tlgs = function(res_t) {
     for (cell in names(res_t)) {
         titration_sample_size(res_t[[cell]], cell)    
     }
+    
+    return(hold)
 }
 
 single_dose_tlgs = function(res_s, v=1) {
@@ -434,17 +460,26 @@ single_dose_tlgs = function(res_s, v=1) {
     text(0, 0, msg, cex=1.5)
     par(op)
     
+    
     if (v==1) {
+        hold1 = list()
         for (k in names(res_s)) {
-            print(k)
-            single_dose_hmap1(res_s[[k]])
+            res = single_dose_hmap1(res_s[[k]])
+            df = data.frame("probe_conc (ug/ml)"=rep(k, nrow(res)),
+                            probe_name=rownames(res),
+                            check.names = F)
+            df = cbind(df, round(res))
+            hold1[[k]] = df
         }
+        hold1 = do.call(rbind, hold1)
+        rownames(hold1) = NULL
     }
-
+    
     if (v==2) {
+        hold2 = list()
         for (k in names(res_s)) {
-            print(k)
-            single_dose_hmap2(res_s[[k]])
+            res = single_dose_hmap2(res_s[[k]])
+            hold2[[k]] = res
         }
     }
     
@@ -466,5 +501,6 @@ single_dose_tlgs = function(res_s, v=1) {
         }
     }
 
-    
+    return(hold1)
 }
+
