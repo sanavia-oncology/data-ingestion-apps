@@ -55,6 +55,8 @@ server = function(input, output, session) {
         
         input_react_vals$table_front_page = table_front_page
         
+        N = sum(as.numeric(table_front_page$results_n), na.rm = T)
+        
         output$projects_table = DT::renderDataTable(DT::datatable({
             data = table_front_page
             
@@ -89,7 +91,9 @@ server = function(input, output, session) {
                             c("All", "single_dose", "titration",
                               "multi_dose", "other"))
             ),
-            DT::dataTableOutput("projects_table")
+            DT::dataTableOutput("projects_table"),
+            tags$p(paste0("Total Sample Size: ", N),
+                   class="h5 text-secondary"),
         )
         
         insertUI(
@@ -1201,24 +1205,30 @@ server = function(input, output, session) {
         }
     }) |> bindEvent(input$analysis_type)
     pdf_generation_status = eventReactive(input$proceed_to_TLGs, {
-        project_data       <- input_react_vals$project_data
-        target_dict_order  <- target_order_vals$target_dict_order
+        project_data       = input_react_vals$project_data
+        target_dict_order  = target_order_vals$target_dict_order
         
         print(target_dict_order)
         print(head(project_data))
         
-        target_spec_levels <- target_dict_order$target_spec_name
+        target_spec_levels = target_dict_order$target_spec_name
         
-        to_drop      <- project_data[, "annotation"] %in% "Drop from TLGs"
-        project_data <- project_data[!to_drop, , drop = FALSE]
+        to_drop      = project_data[, "annotation"] %in% "Drop from TLGs"
+        project_data = project_data[!to_drop, , drop = FALSE]
         
-        keep               <- target_spec_levels %in% project_data[, "target_spec_name"]
-        target_spec_levels <- target_spec_levels[keep]
+        keep               = target_spec_levels %in% project_data[, "target_spec_name"]
+        target_spec_levels = target_spec_levels[keep]
         
-        project_data[, "target_spec_name"] <- factor(
+        project_data[, "target_spec_name"] = factor(
             as.character(project_data[, "target_spec_name"]),
             levels = target_spec_levels
         )
+        
+        project_data[, "conc (ug/ml)"] = factor(
+            as.numeric(project_data[, "conc (ug/ml)"])
+        )
+        
+        project_data[, "Probe Quant Value"] = project_data[, "conc (ug/ml)"]
         
         pa = get_probe_annotation(project_data)
         
@@ -1230,12 +1240,12 @@ server = function(input, output, session) {
         
         if (input$analysis_type == "Probe x Cell Lines") {
             res_s = prep_single_dose_data(project_data)
-            tab = single_dose_tlgs(res_s, v = 1)
+            tab = single_dose_tlgs(res_s, pa=pa)
         }
         
         if (input$analysis_type == "Probe x Conc") {
             res_t = prep_multi_dose_data(project_data)
-            tab = titration_tlgs(res_t)
+            tab = titration_tlgs(res_t, pa=pa)
         }
         
         dev.off()
@@ -1254,7 +1264,7 @@ server = function(input, output, session) {
                   file = paste0(tlgs_path_tmp_tlgs, 
                                 stamp, "_01-tab_basic_table.csv"),
                   row.names = F)
-        
+   
         # return a success flag when everything above is finished
         return(TRUE)
     })
@@ -1275,15 +1285,15 @@ server = function(input, output, session) {
                 tags$p("TLGs ready!"),
                 tags$div(
                     class="row",
-                    tags$div(
-                        class="col",
-                        actionButton(
-                            "view_tlgs",
-                            "View TLGs",
-                            class = "btn-primary",
-                            width="100%"
-                        )
-                    ),
+                    # tags$div(
+                    #     class="col",
+                    #     actionButton(
+                    #         "view_tlgs",
+                    #         "View TLGs",
+                    #         class = "btn-primary",
+                    #         width="100%"
+                    #     )
+                    # ),
                     tags$div(
                         class="col",
                         tags$p("")
@@ -1293,70 +1303,65 @@ server = function(input, output, session) {
         )
     })
     
-    # view tlgs page
-    observe({
-        if (isTruthy(input$proceed_to_TLGs)) {
-            removeUI(selector = "#main_contents1")
-        }
-        
-        insert_me1 = tags$div(
-            id = "ref_probe_id_div",
-            tags$div(
-                class="row",
-                tags$div(
-                    id = "ref_probe_id_div2",
-                    tags$p(paste0(input$analysis_type, " Table"),
-                           class="h5 text-primary fw-bold")
-                )
-            ),
-            "stuff here"
-        )
-        
-        basic_heatmap = tags$div(
-            style="height: 970px",
-            tags$iframe(
-                src = "docs/tlgs/01-fig_basic_heatmap.pdf#zoom=50",
-                width="80%",
-                height="60%"
-            )
-        )
-        
-        insert_me2 = tags$div(
-            class="row",
-            id = "ref_probe_id_div",
-            tags$div(
-                tags$div(
-                    id = "ref_probe_id_div2",
-                    tags$p(paste0(input$analysis_type, " Heatmap"),
-                           class="h5 text-primary fw-bold")
-                ),
-                basic_heatmap,
-            ),
-        )
-        
-        insertUI(
-            selector = "#main_contents",
-            where = "afterEnd",
-            ui = tags$div(
-                id = "main_contents1",
-                tags$div(
-                    class="row",
-                    tags$div(
-                        class="col",
-                        id = "main_contents_col1",
-                        insert_me1
-                    ),
-                    tags$div(
-                        class="col",
-                        id = "main_contents_col2",
-                        tags$div(
-                            id = "main_contents_col2_topmark_div",
-                        ),
-                        insert_me2
-                    )
-                )
-            )
-        )
-        
-    }) |> bindEvent(input$view_tlgs)
+    # # view tlgs page
+    # observe({
+    #     if (isTruthy(input$proceed_to_TLGs)) {
+    #         removeUI(selector = "#main_contents1")
+    #     }
+    #     
+    #     insert_me1 = tags$div(
+    #         id = "ref_probe_id_div",
+    #         tags$div(
+    #             class="row",
+    #             tags$div(
+    #                 id = "ref_probe_id_div2",
+    #                 tags$p(paste0(input$analysis_type),
+    #                        class="h5 text-primary fw-bold")
+    #             )
+    #         ),
+    #         "Done"
+    #     )
+    #     
+    #     # basic_heatmap = tags$div(
+    #     #     style="height: 970px",
+    #     #     tags$iframe(
+    #     #         src = "docs/tlgs/01-fig_basic_heatmap.pdf#zoom=50",
+    #     #         width="80%",
+    #     #         height="60%"
+    #     #     )
+    #     # )
+    #     # 
+    #     # insert_me2 = tags$div(
+    #     #     class="row",
+    #     #     id = "ref_probe_id_div",
+    #     #     tags$div(
+    #     #         basic_heatmap,
+    #     #     ),
+    #     # )
+    #     
+    #     insertUI(
+    #         selector = "#main_contents",
+    #         where = "afterEnd",
+    #         ui = tags$div(
+    #             id = "main_contents1",
+    #             tags$div(
+    #                 class="row",
+    #                 tags$div(
+    #                     class="col",
+    #                     id = "main_contents_col1",
+    #                     insert_me1
+    #                 ),
+    #                 tags$div(
+    #                     class="col",
+    #                     id = "main_contents_col2",
+    #                     tags$div(
+    #                         id = "main_contents_col2_topmark_div",
+    #                     ),
+    #                     "insert_me2"
+    #                 )
+    #             )
+    #         )
+    #     )
+    #     
+    # }) |> bindEvent(input$view_tlgs)
 }
