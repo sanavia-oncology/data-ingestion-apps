@@ -161,6 +161,8 @@ server = function(input, output, session) {
             tmp[[k]] = tmp_dat
         }
         dat = do.call(rbind, tmp)
+        to_keep = grep("^Keep", dat[["to_drop"]])
+        dat = dat[to_keep,,drop=F]
         rownames(dat) = NULL
         
         # make dicts
@@ -734,7 +736,7 @@ server = function(input, output, session) {
         
         cleaned_dat = clean_dat(dat, probe_dict, target_spec_dict)
         input_react_vals$cleaned_dat = cleaned_dat
-        
+
         scol = c("Platename",
                  "Plate Position",
                  "dose_type",
@@ -752,6 +754,11 @@ server = function(input, output, session) {
                                        "conc (ug/ml)",
                                        "mfi")
         
+        write.csv(cleaned_dat_sub,
+                  file=paste0(tlgs_path_tmp_data, stamp, 
+                              "_initial_input_data.csv"),
+                  row.names=FALSE)
+    
         cleaned_dat_sub$mfi = round(cleaned_dat_sub$mfi)
         plate_col = as.numeric(gsub("[A-Z]", "", cleaned_dat_sub[["position"]]))
         plate_row = substr(cleaned_dat_sub[["position"]], 1, 1)
@@ -994,6 +1001,7 @@ server = function(input, output, session) {
         input_react_vals$project_data = project_data
         
         target_dict_download = input_react_vals$target_spec_dict
+        target_dict_download = target_dict_download[!duplicated(target_dict_download$target_spec_alias),,drop=F]
         target_dict_download$target_spec_name = target_dict_download$target_spec_alias
         target_dict_download$order = 1:nrow(target_dict_download)
         

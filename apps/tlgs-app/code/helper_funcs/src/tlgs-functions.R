@@ -24,9 +24,6 @@ clean_dat = function(dat, probe_dict, target_spec_dict) {
     dat$probe_name = probe_alias_xpand
     dat$target_spec_name = target_spec_alias_xpand
     
-    to_keep = grep("^Keep", dat[["to_drop"]])
-    dat = dat[to_keep,,drop=F]
-    
     rownames(dat) = NULL
     
     return(dat)
