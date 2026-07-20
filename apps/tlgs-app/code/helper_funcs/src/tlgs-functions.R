@@ -61,6 +61,8 @@ titration_hmap = function(dat,
                           ncut=ncut_ti,
                           pa=NULL,
                           max_mfi=NULL) {
+    pa=NULL
+    
     # graph params
     cellheight = 15
     cellwidth = 35
@@ -309,6 +311,8 @@ single_dose_hmap = function(dat,
                             ncut=ncut_sd,
                             pa=NULL,
                             max_mfi=NULL) {
+    pa = NULL
+
     # graph params
     cellheight = 15
     cellwidth = 35

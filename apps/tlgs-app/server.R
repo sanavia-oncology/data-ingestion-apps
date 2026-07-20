@@ -1080,6 +1080,7 @@ server = function(input, output, session) {
 
         insert_me2 = tags$div(
             id = "ref_probe_id_div",
+            
             tags$div(
                 class="row",
                 tags$div(
@@ -1091,13 +1092,35 @@ server = function(input, output, session) {
             
             tags$div(
                 class="row",
-                tags$p("Analysis type"),
+                tags$div(
+                    class="col",
+                    id = "add_target_alias",
+                    textAreaInput(inputId="tlgs_analysis_name", 
+                                  label="Analysis Name", 
+                                  value = "", placeholder = NULL),
+                ),
+                tags$div(
+                    class="col",
+                    tags$p("")
+                )
+            ),
+            
+            tags$div(
+                class="row",
+                tags$div(
+                    id = "ref_probe_id_div2",
+                    tags$p("")
+                )
+            ),
+            
+            tags$div(
+                class="row",
                 tags$div(
                     class="col",
                     id = "add_target_alias",
                     selectInput(
                         "analysis_type",
-                        "Select Analysis Type",
+                        "Analysis Type",
                         c("None",
                           "Probe x Cell Lines",
                           "Probe x Conc")
@@ -1232,10 +1255,18 @@ server = function(input, output, session) {
         
         pa = get_probe_annotation(project_data)
         
+        tlgs_analysis_name = input$tlgs_analysis_name
+        print(tlgs_analysis_name)
+        
         # generate PDFs synchronously 
         fig1_path = paste0(tlgs_path_tmp_tlgs, 
-                           stamp,
+                           stamp, 
+                           "_",
+                           tlgs_analysis_name,
                            "_01-fig_basic_heatmap.pdf")
+        
+        print(fig1_path)
+        
         pdf(fig1_path, width = 8.25, height = 11)
         
         if (input$analysis_type == "Probe x Cell Lines") {
@@ -1261,8 +1292,11 @@ server = function(input, output, session) {
         tlgs_react_vals$tab = tab
         
         write.csv(tab,
-                  file = paste0(tlgs_path_tmp_tlgs, 
-                                stamp, "_01-tab_basic_table.csv"),
+                  file = paste0(tlgs_path_tmp_tlgs,
+                                stamp,
+                                "_",
+                                tlgs_analysis_name,
+                                "_01-tab_basic_table.csv"),
                   row.names = F)
    
         # return a success flag when everything above is finished
@@ -1282,23 +1316,20 @@ server = function(input, output, session) {
                 class = "row",
                 tags$p(""),
                 tags$br(),
-                tags$p("TLGs ready!"),
-                tags$div(
-                    class="row",
-                    # tags$div(
-                    #     class="col",
-                    #     actionButton(
-                    #         "view_tlgs",
-                    #         "View TLGs",
-                    #         class = "btn-primary",
-                    #         width="100%"
-                    #     )
-                    # ),
-                    tags$div(
-                        class="col",
-                        tags$p("")
-                    )
-                )
+                tags$p(""),
+                tags$p("TLGs are ready!",
+                       class="h5 text-warning fw-bold"),
+                # tags$div(
+                #     class="row",
+                #     tags$iframe(src = "img/fun/waiting-sana-cat1.png", 
+                #                 width = "30%", 
+                #                 height = "500px", 
+                #                 style = "border:none;"),
+                #     tags$div(
+                #         class="col",
+                #         tags$p("")
+                #     )
+                # )
             )
         )
     })
