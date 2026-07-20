@@ -220,6 +220,8 @@ titration_tlgs = function(res_t,
                           pa=NULL, 
                           sample_size=FALSE, 
                           max_mfi=NULL) {
+    pa = NULL
+    
     ncells = length(res_t)
     nsmpls = sum(sapply(res_t, nrow))
     
@@ -471,6 +473,8 @@ single_dose_tlgs = function(res_s,
                             pa=NULL, 
                             sample_size=FALSE,
                             max_mfi=NULL) {
+    pa=NULL
+    
     ncells = length(unique(sapply(res_s, function(x) unique(x[["target_spec_name"]]))))
     nsmpls = sum(sapply(res_s, nrow))
     
