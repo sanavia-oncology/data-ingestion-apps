@@ -301,6 +301,12 @@ server = function(input, output, session) {
                        class="h6 text-secondary fw-bold"),
                 tags$p(msg,
                        class="h6 text-secondary"),
+                tags$p(""),
+                tags$br(),
+                tags$div(
+                    class="col",
+                    downloadButton("probe_dict_download_csv", "Download Probe Dict as CSV")
+                )
             )
         )
         
@@ -437,6 +443,12 @@ server = function(input, output, session) {
                            class="h6 text-secondary fw-bold"),
                     tags$p(msg,
                            class="h6 text-secondary")
+                ),
+                tags$p(""),
+                tags$br(),
+                tags$div(
+                    class="col",
+                    downloadButton("probe_dict_download_csv", "Download Probe Dict as CSV")
                 )
             )
             
@@ -472,6 +484,26 @@ server = function(input, output, session) {
                 duration = NULL
             )
         }
+        
+        # #----------------#
+        # # update probe_dict
+        # 
+        # orig_probe_dict = read.csv(paste0(app_dir, 
+        #                                 "www/docs/probe_dict/20260712-probe-info.csv"),
+        #                            header = T, check.names = F)
+        # 
+        # check_new = !probe_dict[,"probe_id"] %in% orig_probe_dict[["probe_id"]]
+        # 
+        # if (any(check_new)) {
+        #     tmp = probe_dict[check_new, c("probe_id", "probe_alias"), drop=F]
+        #     upadte_probe_dict = rbind(orig_probe_dict, tmp)
+        #     write.csv(upadte_probe_dict,
+        #               file = paste0(app_dir, 
+        #                             "www/docs/probe_dict/20260712-probe-info.csv"),
+        #               row.names = F)
+        # }
+        # 
+        # #-----------------#
         
     }) |> bindEvent(input$add_probe_alias)
     
@@ -562,6 +594,12 @@ server = function(input, output, session) {
                        class="h6 text-secondary fw-bold"),
                 tags$p(msg,
                        class="h6 text-secondary"),
+                tags$p(""),
+                tags$br(),
+                tags$div(
+                    class="col",
+                    downloadButton("target_dict_download_csv", "Download Target Dict as CSV")
+                )
             )
         )
         
@@ -694,6 +732,12 @@ server = function(input, output, session) {
                            class="h6 text-secondary fw-bold"),
                     tags$p(msg,
                            class="h6 text-secondary"),
+                    tags$p(""),
+                    tags$br(),
+                    tags$div(
+                        class="col",
+                        downloadButton("target_dict_download_csv", "Download Target Dict as CSV")
+                    )
                 )
             )
             
@@ -721,6 +765,28 @@ server = function(input, output, session) {
                 )
             )
         }
+        
+        # #----------------#
+        # # update target_dict
+        # 
+        # orig_target_dict = read.csv(paste0(app_dir, 
+        #                                    "www/docs/target_dict/20260712-target-dict.csv"),
+        #                             header = T, check.names = F)
+        # 
+        # check_new = !target_dict[,"target_spec_id"] %in% orig_target_dict[["target_spec_id"]]
+        # 
+        # if (any(check_new)) {
+        #     tmp = target_dict[check_new, c("target_spec_id", "target_spec_alias"), drop=F]
+        #     upadte_target_dict = rbind(orig_target_dict, tmp)
+        #     write.csv(upadte_target_dict,
+        #               file = paste0(app_dir, 
+        #                             "www/docs/target_dict/20260712-target-dict.csv"),
+        #               row.names = F)
+        # }
+        # 
+        # #-----------------#
+        
+        
     }) |> bindEvent(input$add_target_alias)
     
     # review and annotate
@@ -1146,7 +1212,7 @@ server = function(input, output, session) {
                     class="col",
                     id = "proceed_to_TLGs",
                     actionButton("proceed_to_TLGs",
-                                 "Generate to TLGs",
+                                 "Generate Main Table",
                                  class="btn-secondary",
                                  disabled = TRUE)
                 ),
@@ -1325,82 +1391,343 @@ server = function(input, output, session) {
                 tags$p(""),
                 tags$br(),
                 tags$p(""),
-                tags$p("TLGs are ready!",
-                       class="h5 text-warning fw-bold"),
-                # tags$div(
-                #     class="row",
-                #     tags$iframe(src = "img/fun/waiting-sana-cat1.png", 
-                #                 width = "30%", 
-                #                 height = "500px", 
-                #                 style = "border:none;"),
-                #     tags$div(
-                #         class="col",
-                #         tags$p("")
-                #     )
-                # )
+                tags$p("Proceed to Order Probes",
+                       class="h5 text-primary fw-bold"),
+                tags$div(
+                    class="col",
+                    actionButton("proceed_to_order_probes",
+                                 "Proceed to Order Probes")
+                )
             )
         )
     })
     
-    # # view tlgs page
-    # observe({
-    #     if (isTruthy(input$proceed_to_TLGs)) {
-    #         removeUI(selector = "#main_contents1")
-    #     }
-    #     
-    #     insert_me1 = tags$div(
-    #         id = "ref_probe_id_div",
-    #         tags$div(
-    #             class="row",
-    #             tags$div(
-    #                 id = "ref_probe_id_div2",
-    #                 tags$p(paste0(input$analysis_type),
-    #                        class="h5 text-primary fw-bold")
-    #             )
-    #         ),
-    #         "Done"
-    #     )
-    #     
-    #     # basic_heatmap = tags$div(
-    #     #     style="height: 970px",
-    #     #     tags$iframe(
-    #     #         src = "docs/tlgs/01-fig_basic_heatmap.pdf#zoom=50",
-    #     #         width="80%",
-    #     #         height="60%"
-    #     #     )
-    #     # )
-    #     # 
-    #     # insert_me2 = tags$div(
-    #     #     class="row",
-    #     #     id = "ref_probe_id_div",
-    #     #     tags$div(
-    #     #         basic_heatmap,
-    #     #     ),
-    #     # )
-    #     
-    #     insertUI(
-    #         selector = "#main_contents",
-    #         where = "afterEnd",
-    #         ui = tags$div(
-    #             id = "main_contents1",
-    #             tags$div(
-    #                 class="row",
-    #                 tags$div(
-    #                     class="col",
-    #                     id = "main_contents_col1",
-    #                     insert_me1
-    #                 ),
-    #                 tags$div(
-    #                     class="col",
-    #                     id = "main_contents_col2",
-    #                     tags$div(
-    #                         id = "main_contents_col2_topmark_div",
-    #                     ),
-    #                     "insert_me2"
-    #                 )
-    #             )
-    #         )
-    #     )
-    #     
-    # }) |> bindEvent(input$view_tlgs)
+    # view tlgs page / proceed_to_order_probes
+    observe({
+        if (isTruthy(input$proceed_to_order_probes)) {
+            removeUI(selector = "#main_contents1")
+        }
+        
+        tab = tlgs_react_vals$tab
+        probe_name = tab[,"probe_name"]
+        df = data.frame(probe_name=probe_name,
+                        order_by_group="A",
+                        order_by_number=1:length(probe_name))
+        
+        output$probe_order_table = DT::renderDataTable(DT::datatable({
+            data = df
+            data
+        },
+        selection = "none",
+        options = list(pageLength = 5,
+                       dom = "tpf",
+                       columnDefs = list(
+                           list(className = 'dt-nowrap', targets = '_all'))
+        )))
+        
+        tlgs_react_vals$probe_order_table = df
+        
+        
+        insert_me1 = tags$div(
+            id = "ref_probe_id_div",
+            tags$div(
+                class="row",
+                tags$div(
+                    id = "ref_probe_id_div2",
+                    tags$p(paste0(input$analysis_type),
+                           class="h3 text-primary fw-bold"),
+                    tags$p("Define Order of the Probes.",
+                           class="text-secondary")
+                )
+            ),
+            tags$div(
+                class="col",
+                downloadButton("probe_order_download_csv", 
+                               "Download Probe Order as CSV")
+            ),
+            DT::dataTableOutput("probe_order_table"),
+            tags$p("Load an updated Probe Order CSV File",
+                   class="h3 text-primary fw-bold"),
+            tags$div(
+                class="row",
+                fileInput("file3", "Updated Probe Order CSV File", 
+                          accept=".csv")
+            ),
+            actionButton("update_probe_order",
+                         "Update Probe Oder",
+                         class="btn-warning",
+                         disabled=TRUE)
+        )
+        
+        basic_heatmap = tags$div(
+            style="height: 970px",
+            tags$iframe(
+                src = "docs/tlgs/01-fig_basic_heatmap.pdf#zoom=50",
+                width="80%",
+                height="60%"
+            )
+        )
+
+        insert_me2 = tags$div(
+            class="row",
+            id = "ref_probe_id_div",
+            tags$div(
+                basic_heatmap,
+            ),
+        )
+        
+        insertUI(
+            selector = "#main_contents",
+            where = "afterEnd",
+            ui = tags$div(
+                id = "main_contents1",
+                tags$div(
+                    class="row",
+                    tags$div(
+                        class="col",
+                        id = "main_contents_col1",
+                        insert_me1
+                    ),
+                    tags$div(
+                        class="col",
+                        id = "main_contents_col2",
+                        tags$div(
+                            id = "main_contents_col2_topmark_div",
+                        ),
+                        insert_me2
+                    )
+                )
+            )
+        )
+        
+    }) |> bindEvent(input$proceed_to_order_probes)
+    
+    observe({
+        if (!is.null(input$file3)) {
+            updateActionButton(session, "update_probe_order", disabled=FALSE) 
+        }
+    }) |> bindEvent(input$file3)
+
+    observe({
+        
+        if (isTruthy(input$update_probe_order)) {
+            removeUI(selector = "#main_contents1")
+        }
+        
+        # read file
+        probe_order_table1 = tlgs_react_vals$probe_order_table
+        probe_order_table2 = read.csv(input$file3$datapath, header = TRUE)
+        
+        probe_order_table1[,"order_by_group"] = probe_order_table2[,"order_by_group"]
+        probe_order_table1[,"order_by_number"] = probe_order_table2[,"order_by_number"]
+        
+        tlgs_react_vals$probe_order_table = probe_order_table1
+        
+        output$probe_order_table = DT::renderDataTable(DT::datatable({
+            data = tlgs_react_vals$probe_order_table
+            data
+        },
+        selection = "none",
+        options = list(pageLength = 5,
+                       dom = "tpf",
+                       columnDefs = list(
+                           list(className = 'dt-nowrap', targets = '_all'))
+        )))
+
+        
+        #---------------#
+        
+        project_data       = input_react_vals$project_data
+        target_dict_order  = target_order_vals$target_dict_order
+        
+        print(target_dict_order)
+        print(head(project_data))
+        
+        target_spec_levels = target_dict_order$target_spec_name
+        
+        to_drop      = project_data[, "annotation"] %in% "Drop from TLGs"
+        project_data = project_data[!to_drop, , drop = FALSE]
+        
+        keep               = target_spec_levels %in% project_data[, "target_spec_name"]
+        target_spec_levels = target_spec_levels[keep]
+        
+        project_data[, "target_spec_name"] = factor(
+            as.character(project_data[, "target_spec_name"]),
+            levels = target_spec_levels
+        )
+
+        o = order(probe_order_table2[,"order_by_group"],
+                  probe_order_table2[,"order_by_number"])
+        
+        probe_name_levels = probe_order_table2[,"probe_name"][o]
+        
+        project_data[, "probe_name"] = factor(
+            as.character(project_data[, "probe_name"]),
+            levels = probe_name_levels
+        )
+        
+        project_data[, "conc (ug/ml)"] = factor(
+            as.numeric(project_data[, "conc (ug/ml)"])
+        )
+        
+        project_data[, "Probe Quant Value"] = project_data[, "conc (ug/ml)"]
+        
+        pa = get_probe_annotation(project_data)
+        
+        tlgs_analysis_name = input$tlgs_analysis_name
+        print(tlgs_analysis_name)
+        
+        # generate PDFs synchronously 
+        fig1_path = paste0(tlgs_path_tmp_tlgs, 
+                           stamp, 
+                           "_",
+                           tlgs_analysis_name,
+                           "_01-fig_basic_heatmap.pdf")
+        
+        print(fig1_path)
+        
+        pdf(fig1_path, width = 8.25, height = 11)
+        
+        if (input$analysis_type == "Probe x Cell Lines") {
+            res_s = prep_single_dose_data(project_data)
+            tab = single_dose_tlgs(res_s, pa=pa)
+        }
+        
+        if (input$analysis_type == "Probe x Conc") {
+            res_t = prep_multi_dose_data(project_data)
+            tab = titration_tlgs(res_t, pa=pa)
+        }
+        
+        dev.off()
+        
+        tlgs_react_vals$project_data = project_data
+        
+        fig1_copy = paste0(app_dir, "www/docs/tlgs/01-fig_basic_heatmap.pdf")
+        sys_call = paste0("cp ",  fig1_path, " ", fig1_copy)
+        system(sys_call)
+        
+        tab[,"annotation"] = pa[tab[,"probe_name"]]
+        
+        tlgs_react_vals$tab = tab
+        
+        write.csv(tab,
+                  file = paste0(tlgs_path_tmp_tlgs,
+                                stamp,
+                                "_",
+                                tlgs_analysis_name,
+                                "_01-tab_basic_table.csv"),
+                  row.names = F)
+        
+        
+        #---------------#
+        
+        
+        insert_me1 = tags$div(
+            id = "ref_probe_id_div",
+            tags$div(
+                class="row",
+                tags$div(
+                    id = "ref_probe_id_div2",
+                    tags$p(paste0(input$analysis_type),
+                           class="h3 text-primary fw-bold"),
+                    tags$p("Define Order of the Probes.",
+                           class="text-secondary")
+                )
+            ),
+            tags$div(
+                class="col",
+                downloadButton("probe_order_download_csv", 
+                               "Download Probe Order as CSV")
+            ),
+            DT::dataTableOutput("probe_order_table"),
+            tags$p("Load an updated Probe Order CSV File",
+                   class="h3 text-primary fw-bold"),
+            tags$div(
+                class="row",
+                fileInput("file3", "Updated Probe Order CSV File", 
+                          accept=".csv")
+            ),
+            actionButton("update_probe_order",
+                         "Update Probe Oder",
+                         class="btn-warning",
+                         disabled=TRUE)
+        )
+        
+        basic_heatmap = tags$div(
+            style="height: 970px",
+            tags$iframe(
+                src = "docs/tlgs/01-fig_basic_heatmap.pdf#zoom=50",
+                width="80%",
+                height="60%"
+            )
+        )
+        
+        insert_me2 = tags$div(
+            class="row",
+            id = "ref_probe_id_div",
+            tags$div(
+                basic_heatmap,
+            ),
+        )
+        
+        insertUI(
+            selector = "#main_contents",
+            where = "afterEnd",
+            ui = tags$div(
+                id = "main_contents1",
+                tags$div(
+                    class="row",
+                    tags$div(
+                        class="col",
+                        id = "main_contents_col1",
+                        insert_me1
+                    ),
+                    tags$div(
+                        class="col",
+                        id = "main_contents_col2",
+                        tags$div(
+                            id = "main_contents_col2_topmark_div",
+                        ),
+                        insert_me2
+                    )
+                )
+            )
+        )
+        
+    }) |> bindEvent(input$update_probe_order)
+    
+    
+    #------ download handlers -----#
+    # probe_dict_download_csv download handler
+    output$probe_dict_download_csv = downloadHandler(
+        filename = function() {
+            paste0("probe_dict_", Sys.Date(), ".csv")
+        },
+        content = function(file) {
+            write.csv(input_react_vals$probe_dict, 
+                      file, row.names = FALSE)
+        }
+    )
+    
+    # target_dict_download_csv download handler
+    output$target_dict_download_csv = downloadHandler(
+        filename = function() {
+            paste0("target_dict_", Sys.Date(), ".csv")
+        },
+        content = function(file) {
+            write.csv(input_react_vals$target_spec_dict, 
+                      file, row.names = FALSE)
+        }
+    )
+    
+    # probe_order_download_csv download handler
+    output$probe_order_download_csv = downloadHandler(
+        filename = function() {
+            paste0("probe_order_", Sys.Date(), ".csv")
+        },
+        content = function(file) {
+            write.csv(tlgs_react_vals$probe_order_table, 
+                      file, row.names = FALSE)
+        }
+    )
 }

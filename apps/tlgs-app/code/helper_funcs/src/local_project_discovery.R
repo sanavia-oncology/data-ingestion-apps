@@ -42,7 +42,6 @@ results_summary_list = function(project_fldr) {
             res = c(date_created=creation_time,
                     project_group=proj_group,
                     project_name=proj_name,
-                    project_desc="Not available yet",
                     results_n=nsmpls,
                     dose_type=dose_type,
                     cell_type_n=ncells,
