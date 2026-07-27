@@ -1143,6 +1143,12 @@ server = function(input, output, session) {
                 tags$p("Current oder",
                        class="h5 text-secondary"),
                 tags$div(
+                    class="col",
+                    downloadButton("target_order_download_csv", 
+                                   "Download Target Order as CSV")
+                ),
+                #target_order_download_csv
+                tags$div(
                     id="target_dict_download1_div_top",
                 ),
                 tags$div(
@@ -1521,10 +1527,16 @@ server = function(input, output, session) {
         probe_order_table1[,"order_by_group"] = probe_order_table2[,"order_by_group"]
         probe_order_table1[,"order_by_number"] = probe_order_table2[,"order_by_number"]
         
+        o = order(probe_order_table2[,"order_by_group"],
+                  probe_order_table2[,"order_by_number"])
+        probe_name_levels = probe_order_table2[,"probe_name"][o]
+        
+        probe_order_table1 = probe_order_table1[o,]
+        
         tlgs_react_vals$probe_order_table = probe_order_table1
         
         output$probe_order_table = DT::renderDataTable(DT::datatable({
-            data = tlgs_react_vals$probe_order_table
+            data = probe_order_table1
             data
         },
         selection = "none",
@@ -1556,11 +1568,6 @@ server = function(input, output, session) {
             levels = target_spec_levels
         )
 
-        o = order(probe_order_table2[,"order_by_group"],
-                  probe_order_table2[,"order_by_number"])
-        
-        probe_name_levels = probe_order_table2[,"probe_name"][o]
-        
         project_data[, "probe_name"] = factor(
             as.character(project_data[, "probe_name"]),
             levels = probe_name_levels
@@ -1730,4 +1737,18 @@ server = function(input, output, session) {
                       file, row.names = FALSE)
         }
     )
+    
+    
+    # target_order_download_csv download handler
+    output$target_order_download_csv = downloadHandler(
+        filename = function() {
+            paste0("target_order_", Sys.Date(), ".csv")
+        },
+        content = function(file) {
+            write.csv(target_order_vals$target_dict_order, 
+                      file, row.names = FALSE)
+        }
+    )
+    
+    
 }
