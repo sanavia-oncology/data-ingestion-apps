@@ -22,14 +22,7 @@ app_card = tags$div(
                     tags$p(paste0("Today's date: ", Sys.Date()),
                            class="text-secondary"),
                     
-                    actionButton(
-                        inputId = "load_project",
-                        label = "Load project(s)",
-                        class = "btn-secondary w-100",
-                        disabled = TRUE
-                    ),
-                    
-                    tags$div(id = "sidebar_anchor")),
+                    tags$div(id = "card_div_top")),
       
       main_contents
     )
@@ -77,19 +70,6 @@ application_page = bslib::nav_panel(
         ")
     ),
 
-    tags$script(
-        HTML("
-            function sendButtonID(id) {
-            Shiny.setInputValue('last_cell_clicked', id);
-            }
-
-            Shiny.addCustomMessageHandler('toggleBtn', function(msg) {
-                var btn = document.getElementById(msg.id);
-                if (btn) btn.disabled = msg.disable;
-            });
-        ")
-    ),
-    
     title = "Flow Cytometry TLGs",
     page_banner("Make flow cytometry tables, graphs, and listings"),
 

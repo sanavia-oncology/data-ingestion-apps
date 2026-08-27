@@ -54,12 +54,10 @@ get_probe_annotation = function(project_data) {
 
 titration_hmap = function(dat, 
                           cell="cell", 
+                          max_mfi=NULL,
                           cluster_rows=FALSE, 
-                          ncut=ncut_ti,
-                          pa=NULL,
-                          max_mfi=NULL) {
-    pa=NULL
-    
+                          ncut=40) {
+
     # graph params
     cellheight = 15
     cellwidth = 35
@@ -71,17 +69,10 @@ titration_hmap = function(dat,
     breaks = seq(0, max_mfi, length.out = N + 1)
     colors = colorRampPalette(rev(RColorBrewer::brewer.pal(n = 7, name = "RdYlBu")))(N)
     
-    if (!is.null(pa)) {
-        annotation_colors = list("annotation"=c("None"=ref_cols["None"],
-                                              "Negative Reference"=ref_cols["Negative Reference"],
-                                             "Positive Reference"=ref_cols["Positive Reference"],
-                                             "Benchmark"=ref_cols["Benchmark"]))
-    }
-
     # data
-    mfi = dat[["gMFI"]]
+    mfi = dat[["mfi"]]
     probe_id = dat[["probe_name"]]
-    probe_conc = dat[["Probe Quant Value"]]
+    probe_conc = dat[["conc (ug/ml)"]]
     MAT = tapply(mfi, list(probe_id, probe_conc), mean, na.rm=T)
     
     # split heatmap matrix
@@ -103,48 +94,20 @@ titration_hmap = function(dat,
         txt = round(mat)
         txt[is.na(txt)] = "."
         
-        if (!is.null(pa)) {
-            annotation_row = data.frame(A=pa[rownames(mat)])
-            
-            annotation_ = annotation_colors$annotation
-            names(annotation_) = sapply(strsplit(names(annotation_), "\\."), "[[", 1)
-            annotation_ = annotation_[names(annotation_) %in% annotation_row$A]
-            annotation_colors$A = annotation_
-            
-            pheatmap::pheatmap(mat,
-                               cluster_rows=cluster_rows,
-                               cluster_cols=FALSE,
-                               cellwidth=cellwidth,
-                               cellheight=cellheight,
-                               angle_col=0,
-                               breaks=breaks,
-                               color=colors,
-                               border_color=border_color,
-                               display_numbers=txt,
-                               number_color=number_color,
-                               main=main,
-                               na_col="gray90",
-                               legend=legend,
-                               annotation_legend=FALSE,
-                               annotation_colors=annotation_colors,
-                               annotation_row=annotation_row)
-        }else{
-            
-            pheatmap::pheatmap(mat,
-                               cluster_rows=cluster_rows,
-                               cluster_cols=FALSE,
-                               cellwidth=cellwidth,
-                               cellheight=cellheight,
-                               angle_col=0,
-                               breaks=breaks,
-                               color=colors,
-                               border_color=border_color,
-                               display_numbers=txt,
-                               number_color=number_color,
-                               main=main,
-                               legend=legend)
-        }
-
+        pheatmap::pheatmap(mat,
+                           cluster_rows=cluster_rows,
+                           cluster_cols=FALSE,
+                           cellwidth=cellwidth,
+                           cellheight=cellheight,
+                           angle_col=0,
+                           breaks=breaks,
+                           color=colors,
+                           border_color=border_color,
+                           display_numbers=txt,
+                           number_color=number_color,
+                           main=main,
+                           legend=legend)
+        
         msg = paste0("Date: ", Sys.Date(), " | ",
                      "Page ", i , "/", lm_)
         grid.text(msg, x=0.5, y=0.98, gp=gpar(fontsize=10))
@@ -156,7 +119,7 @@ titration_hmap = function(dat,
 titration_sample_size = function(dat, 
                                  cell="cell", 
                                  cluster_rows=FALSE, 
-                                 ncut=ncut_ti) {
+                                 ncut=40) {
     # graph params
     cellheight = 15
     cellwidth = 35
@@ -165,9 +128,9 @@ titration_sample_size = function(dat,
     number_color = "black"
 
     # data
-    mfi = dat[["gMFI"]]
+    mfi = dat[["mfi"]]
     probe_id = dat[["probe_name"]]
-    probe_conc = dat[["Probe Quant Value"]]
+    probe_conc = dat[["conc (ug/ml)"]]
     MAT = tapply(mfi, list(probe_id, probe_conc), length)
 
     nr = nrow(MAT)
@@ -213,11 +176,11 @@ titration_sample_size = function(dat,
     
 }
 
-titration_tlgs = function(res_t, 
-                          pa=NULL, 
+titration_plot = function(adam, 
                           sample_size=FALSE, 
                           max_mfi=NULL) {
-    pa = NULL
+    
+    res_t = split(adam, adam$"target_spec_name")
     
     ncells = length(res_t)
     nsmpls = sum(sapply(res_t, nrow))
@@ -235,49 +198,12 @@ titration_tlgs = function(res_t,
         msg = paste0("Titration TLGs\nNumber of cell lines: ", ncells,
                      "\nNumber of total samples: ", nsmpls)
         text(0, 0, msg, cex=1.5)
-        
-        if (!is.null(pa)) {
-            plot(0, 0, axes=F, xlab="", ylab="", pch="", 
-                 main="Titration TLGs\nReference Key",
-                 cex.main=1.25)
-            
-            nr_ = names(pa)[pa == "Negative Reference"]
-            pr_ = names(pa)[pa == "Positive Reference"]
-            bm_ = names(pa)[pa == "Benchmark"]
-            
-            if (length(nr_) > 0) {
-                nr_ = paste0("Negative Reference | ", nr_)    
-            }else{
-                nr_ = paste0("Negative Reference | Not applicable")  
-            }
-            
-            if (length(pr_) > 0) {
-                pr_ = paste0("Positive Reference | ", nr_)    
-            }else{
-                pr_ = paste0("Positive Reference | Not applicable")  
-            }
-            
-            if (length(bm_) > 0) {
-                bm_ = paste0("Benchmark | ", bm_)    
-            }else{
-                bm_ = paste0("Benchmark | Not applicable")  
-            }
-            
-            legend("center", 
-                   legend = c(bm_, 
-                              nr_, 
-                              pr_), 
-                   pch=19, 
-                   col=c(ref_cols["Benchmark"],
-                         ref_cols["Negative Reference"],
-                         ref_cols["Positive Reference"]))
-        }
-        
+
         par(op)
         
         hold = list()
         for (cell in names(res_t)) {
-            res = titration_hmap(res_t[[cell]], cell, pa=pa, max_mfi=p_max)
+            res = titration_hmap(res_t[[cell]], cell, max_mfi=p_max)
             colnames(res) = paste0(colnames(res), " (ug/ml)")
             df = data.frame("target_spec"=rep(cell, nrow(res)),
                             probe_name=rownames(res),
@@ -306,11 +232,9 @@ titration_tlgs = function(res_t,
 }
 
 single_dose_hmap = function(dat,
-                            cluster_rows=FALSE, 
-                            ncut=ncut_sd,
-                            pa=NULL,
-                            max_mfi=NULL) {
-    pa = NULL
+                            max_mfi=NULL,
+                            cluster_rows=FALSE,
+                            ncut=38) {
 
     # graph params
     cellheight = 15
@@ -323,21 +247,14 @@ single_dose_hmap = function(dat,
     breaks = seq(0, max_mfi, length.out = N + 1)
     colors = colorRampPalette(rev(RColorBrewer::brewer.pal(n = 7, name = "RdYlBu")))(N)
     
-    if (!is.null(pa)) {
-        annotation_colors = list("annotation"=c("None"=ref_cols["None"],
-                                                "Negative Reference"=ref_cols["Negative Reference"],
-                                                "Positive Reference"=ref_cols["Positive Reference"],
-                                                "Benchmark"=ref_cols["Benchmark"]))
-    }
-    
     # data
     target_spec_name = dat[["target_spec_name"]]
     probe_name = dat[["probe_name"]]
-    mfi = dat[["gMFI"]]
+    mfi = dat[["mfi"]]
     
     MAT = tapply(mfi, list(probe_name, target_spec_name), mean, na.rm=TRUE)
     
-    probe_conc = dat[["Probe Quant Value"]]             
+    probe_conc = dat[["conc (ug/ml)"]]             
     
     # split heatmap matrix
     nr = nrow(MAT)
@@ -358,44 +275,18 @@ single_dose_hmap = function(dat,
         txt = round(mat)
         txt[is.na(txt)] = "."
         
-        if (!is.null(pa)) {
-            annotation_row = data.frame(annotation=pa[rownames(mat)])
-            
-            annotation_ = annotation_colors$annotation
-            names(annotation_) = sapply(strsplit(names(annotation_), "\\."), "[[", 1)
-            annotation_ = annotation_[names(annotation_) %in% annotation_row$annotation]
-            annotation_colors$annotation = annotation_
-            
-            pheatmap::pheatmap(mat,
-                               cluster_rows=cluster_rows,
-                               cluster_cols=FALSE,
-                               cellwidth=cellwidth,
-                               cellheight=cellheight,
-                               breaks=breaks,
-                               color=colors,
-                               border_color=border_color,
-                               display_numbers=txt,
-                               number_color=number_color,
-                               main=main,
-                               na_col="gray90",
-                               legend=legend,
-                               annotation_legend=FALSE,
-                               annotation_colors=annotation_colors,
-                               annotation_row=annotation_row)
-        }else{
-            pheatmap::pheatmap(mat,
-                               cluster_rows=cluster_rows,
-                               cluster_cols=FALSE,
-                               cellwidth=cellwidth,
-                               cellheight=cellheight,
-                               breaks=breaks,
-                               color=colors,
-                               border_color=border_color,
-                               display_numbers=txt,
-                               number_color=number_color,
-                               main=main,
-                               legend=legend)
-        }
+        pheatmap::pheatmap(mat,
+                           cluster_rows=cluster_rows,
+                           cluster_cols=FALSE,
+                           cellwidth=cellwidth,
+                           cellheight=cellheight,
+                           breaks=breaks,
+                           color=colors,
+                           border_color=border_color,
+                           display_numbers=txt,
+                           number_color=number_color,
+                           main=main,
+                           legend=legend)
 
         msg = paste0("Date: ", Sys.Date(), " | ",
                      "Page ", i , "/", lm_)
@@ -407,7 +298,7 @@ single_dose_hmap = function(dat,
 
 single_dose_sample_size = function(dat,
                                    cluster_rows=FALSE, 
-                                   ncut=ncut_sd) {
+                                   ncut=38) {
     # graph params
     cellheight = 15
     cellwidth = 35
@@ -418,11 +309,11 @@ single_dose_sample_size = function(dat,
     # data
     target_spec_name = dat[["target_spec_name"]]
     probe_name = dat[["probe_name"]]
-    mfi = dat[["gMFI"]]
+    mfi = dat[["mfi"]]
     
     MAT = tapply(mfi, list(probe_name, target_spec_name), length)
     
-    probe_conc = dat[["Probe Quant Value"]]             
+    probe_conc = dat[["conc (ug/ml)"]]             
     
     # split heatmap matrix
     nr = nrow(MAT)
@@ -466,11 +357,10 @@ single_dose_sample_size = function(dat,
     
 }
 
-single_dose_tlgs = function(res_s, 
-                            pa=NULL, 
+single_dose_plot = function(adam, 
                             sample_size=FALSE,
                             max_mfi=NULL) {
-    pa=NULL
+    res_s = split(adam, adam$"conc (ug/ml)")
     
     ncells = length(unique(sapply(res_s, function(x) unique(x[["target_spec_name"]]))))
     nsmpls = sum(sapply(res_s, nrow))
@@ -488,48 +378,10 @@ single_dose_tlgs = function(res_s,
                      "\nNumber of total samples: ", nsmpls)
         text(0, 0, msg, cex=1.5)
         par(op)
-        
-        if (!is.null(pa)) {
-            
-            plot(0, 0, axes=F, xlab="", ylab="", pch="", 
-                 main="Titration TLGs\nReference Key",
-                 cex.main=1.25)
-            
-            nr_ = names(pa)[pa == "Negative Reference"]
-            pr_ = names(pa)[pa == "Positive Reference"]
-            bm_ = names(pa)[pa == "Benchmark"]
-            
-            if (length(nr_) > 0) {
-                nr_ = paste0("Negative Reference |", nr_)    
-            }else{
-                nr_ = paste0("Negative Reference | Not applicable")  
-            }
-            
-            if (length(pr_) > 0) {
-                pr_ = paste0("Positive Reference | ", nr_)    
-            }else{
-                pr_ = paste0("Positive Reference | Not applicable")  
-            }
-            
-            if (length(bm_) > 0) {
-                bm_ = paste0("Benchmark | ", bm_)    
-            }else{
-                bm_ = paste0("Benchmark | Not applicable")  
-            }
-            
-            legend("center", 
-                   legend = c(bm_, 
-                              nr_, 
-                              pr_), 
-                   pch=19, 
-                   col=c(ref_cols["Benchmark"],
-                         ref_cols["Negative Reference"],
-                         ref_cols["Positive Reference"]))
-        }
-        
+ 
         hold1 = list()
         for (k in names(res_s)) {
-            res = single_dose_hmap(res_s[[k]], pa=pa, max_mfi=p_max)
+            res = single_dose_hmap(res_s[[k]], max_mfi=p_max)
             df = data.frame("probe_conc (ug/ml)"=rep(k, nrow(res)),
                             probe_name=rownames(res),
                             check.names = F)
@@ -554,4 +406,392 @@ single_dose_tlgs = function(res_s,
     }
 
     return(hold1)
+}
+
+notes_summary_func = function(notes) {
+    notes = as.character(notes)
+    I = c("none"="None",
+          "neg_ref"="Negative reference",
+          "benchmark"="Benchmark",
+          "drop"="Drop")
+    notes = factor(I[notes], levels=I)
+
+    x = as.data.frame(table(notes))
+    colnames(x) = c("notes", "counts")
+    x
+}
+
+dup_analysis = function(adam) {
+    rownames(adam) = paste0(adam$platename, "|", adam$position)
+    target = adam$target_spec_name
+    probe = adam$probe_name
+    conc = adam$"conc (ug/ml)"
+    
+    duplicates = rep("none", nrow(adam))
+    names(duplicates) = rownames(adam)
+    
+    x = paste0("(", target, ") x (", probe, ") x (", conc, " ug/ml)")
+    dat_list = split(adam, x)
+    ndups = sapply(dat_list, nrow)
+    
+    if (any(ndups > 1)) {
+        dat_list = dat_list[order(-ndups)]
+        dat_list = dat_list[ndups > 1]
+        
+        for (i in 1:length(dat_list)) {
+            X = dat_list[[i]]
+            sel = rownames(X)
+            group_name = paste0("DUP-", sprintf("%03d", i))
+            duplicates[sel] = group_name
+        }
+    }
+    
+    adam$duplicates = duplicates
+    
+    return(adam)
+}
+
+adam_plot = function(adam, 
+                     sample_names=NULL, 
+                     group_name=NULL,
+                     session_name=NULL,
+                     filename=NULL) {
+    
+    if (is.null(session_name)) {
+        session_name = sapply(strsplit(as.character(Sys.time()), "\\."), "[[", 1)
+    }
+    
+    adam$probe_name = as.character(adam$probe_name)
+    adam$target_spec_name = as.character(adam$target_spec_name)
+    
+    if (is.null(group_name)) {
+        group_name = "SELECTED SAMPLES"
+    }
+    
+    set.seed(1983)
+    o = sample(1:nrow(adam), nrow(adam), replace = F)
+    dat = adam[o,,drop=F]
+    rownames(dat) = paste0(dat$platename, "|", dat$position)
+
+    y = dat$mfi
+    loc = 1:length(y)
+    names(y) = rownames(dat)
+    names(loc) = rownames(dat)
+    
+    if (!is.null(filename)) {
+        pdf(filename, height = 2.65, width = 6)
+    }
+   
+    op = par(mar=c(3, 3, 0.5, 1), mfrow=c(1, 2), mgp=c(1.8, .8, 0))
+
+    # fig 1
+    plot(loc, y,
+         col="gray85",
+         pch=19,
+         ylab="MFI",
+         ylim=c(0, max(y, na.rm=TRUE)),
+         cex.axis=0.9,
+         xlab=paste0("Samples (", length(y), ")"))
+    
+    if (!is.null(sample_names)) {
+        points(loc[sample_names], y[sample_names], 
+               pch=19,
+               col="red", 
+               cex=1.2)
+        ave = round(mean(y[sample_names], na.rm = T), 1)
+        abline(h=ave, col="red4", lwd=3)
+    }else{
+        ave = round(mean(y, na.rm = T), 1)
+        abline(h=ave, col="black", lwd=3)
+    }
+
+    # fig 2
+    par(mar=c(3, 0, 0.5, 0.5), mgp=c(1.8, .8, 0))
+    
+    plot(0, 0, ylim=c(0.5, 10.5), xlim=c(0, 10),
+         axes=F, xlab="", ylab="", main="",
+         pch="")
+    
+    col2 = "gray30"
+    col3 = "gray90"
+
+    if (is.null(sample_names)) {
+        col1 = "gray50"
+        
+        group_name = "ALL DATA"
+        probe_name = paste0(length(unique(adam$probe_name))," PROBES")
+        target_name = paste0(length(unique(adam$target_spec_name))," TARGETS")
+        
+        rng = range(adam$"conc (ug/ml)")
+        if (rng[1]==rng[2]) {
+            conc_name = paste0("Conc. ", rng[1], " (ug/ml)")
+        }else{
+            conc_name = paste0("Conc. ", rng[1], " - ", rng[2], " (ug/ml)")
+        }
+    }else{
+        col1 = "red3"
+        
+        target = unique(dat[sample_names, "target_spec_name"])
+        probe = unique(dat[sample_names, "probe_name"])
+        rng = range(dat[sample_names, "conc (ug/ml)"])
+        
+        lt = length(target)
+        if (lt==1) {
+            target_name = target
+        }else{
+            target_name = paste0(lt, " TARGETS")
+        }
+        
+        lp = length(probe)
+        if (lp==1) {
+            probe_name = probe
+        }else{
+            probe_name = paste0(lp, " PROBES")
+        }
+        
+        if (rng[1]==rng[2]) {
+            conc_name = paste0("Conc. ", rng[1], " (ug/ml)")
+        }else{
+            conc_name = paste0("Conc. ", rng[1], " - ", rng[2], " (ug/ml)")
+        }
+        
+        if (nchar(target_name) > 25) {
+            target_name = paste0(substr(target_name, 1, 17),"*TRUNC*")
+        }
+        
+        if (nchar(probe_name) > 25) {
+            probe_name = paste0(substr(probe_name, 1, 17),"*TRUNC*")
+        }
+        
+        if (nchar(group_name) > 25) {
+            group_name = paste0(substr(group_name, 1, 17),"*TRUNC*")
+        }
+    }
+    
+    if (is.null(sample_names)) {
+        sample_size = paste0("Sample size: ", length(y))
+        mean_note = paste0("Mean: ", ave)
+        range_note = paste0("Range: ", 
+                            round(min(y, na.rm = T), 1), 
+                            " - ",
+                            round(max(y, na.rm = T), 1))
+    }else{
+        sample_size = paste0("Sample size: ", length(y[sample_names]))
+        mean_note = paste0("Mean: ", ave)
+        range_note = paste0("Range: ", 
+                            round(min(y[sample_names], na.rm = T), 1), 
+                            " - ",
+                            round(max(y[sample_names], na.rm = T), 1))
+    }
+
+    text(5, 10 - 1.5 * 0, group_name, cex=1.2, font=2)
+    text(5, 10 - 1.5 * 1, probe_name, cex=1.2, col=col1)
+    text(5, 10 - 1.5 * 2, target_name, cex=1.2, col=col1)
+    text(5, 10 - 1.5 * 3, conc_name, cex=1.2, col=col1)
+    text(5, 10 - 1.5 * 4, sample_size, cex=1.2, col=col2)
+    text(5, 10 - 1.5 * 5, mean_note, cex=1.2, col=col2)
+    text(5, 10 - 1.5 * 6, range_note, cex=1.2, col=col2)
+
+    mtext("SESSION_NAME", side = 1, line = 0.5, col=col3, cex=0.8)
+    mtext(session_name, side = 1, line = 1.25, col=col3, cex=0.8)
+    
+    par(op)
+    
+    if (!is.null(filename)) {
+        dev.off()
+    }
+
+}
+
+dup_adam_plot = function(adam, 
+                         session_name=NULL, 
+                         filename=NULL) {
+    
+    check = adam$duplicates %in% "none"
+
+    if (!is.null(filename)) {
+        pdf(filename, height = 2.65, width = 6)
+    }
+    
+    if (all(check)) {
+
+        op = par(mar=c(3, 0, 0.5, 0.5), mgp=c(1.8, .8, 0))
+        plot(0, 0, ylim=c(0.5, 10.5), xlim=c(0, 10),
+             axes=F, xlab="", ylab="", main="",
+             pch="")
+        text(5, 5, "GREAT!\nNo duplicates found", cex=1.5)
+        par(op)
+
+    }else{
+        
+        adam_sub = adam[!check,,drop=FALSE]
+        adam_sub_list = split(adam_sub, adam_sub$duplicates)
+        for (dup_id in names(adam_sub_list)) {
+            m = adam_sub_list[[dup_id]]
+            sample_names = paste0(m$platename, "|", m$position)
+            group_name = dup_id
+            adam_plot(adam,
+                      sample_names=sample_names,
+                      group_name=group_name,
+                      session_name=session_name,
+                      filename=NULL)
+        }
+    }
+    
+    if (!is.null(filename)) {
+        dev.off()
+    }
+
+}
+
+
+titration_res_table = function(adam, sample_size=FALSE) {
+    
+    res_t = split(adam, adam$"target_spec_name")
+    
+    ncells = length(res_t)
+    nsmpls = sum(sapply(res_t, nrow))
+
+    hold = list()
+    for (cell in names(res_t)) {
+        dat = res_t[[cell]]
+        
+        mfi = dat[["mfi"]]
+        probe_id = dat[["probe_name"]]
+        probe_conc = dat[["conc (ug/ml)"]]
+        
+        if (sample_size) {
+            res = tapply(mfi, list(probe_id, probe_conc), length)
+        }else{
+            res = tapply(mfi, list(probe_id, probe_conc), mean, na.rm=T)
+        }
+        
+        colnames(res) = paste0(colnames(res), " (ug/ml)")
+        df = data.frame("target_spec"=rep(cell, nrow(res)),
+                        probe_name=rownames(res),
+                        check.names = F)
+        df = cbind(df, round(res))
+        hold[[cell]] = df  
+    }
+    hold = do.call(rbind, hold)
+    rownames(hold) = NULL
+    
+    return(hold)
+}
+
+single_dose_res_table = function(adam, sample_size=FALSE) {
+    res_s = split(adam, adam$"conc (ug/ml)")
+    
+    names(res_s) = paste0(names(res_s), " (ug/ml)")
+    
+    ncells = length(unique(sapply(res_s, function(x) unique(x[["target_spec_name"]]))))
+    nsmpls = sum(sapply(res_s, nrow))
+    
+    hold = list()
+    for (k in names(res_s)) {
+        dat = res_s[[k]]
+        target_spec_name = dat[["target_spec_name"]]
+        probe_name = dat[["probe_name"]]
+        mfi = dat[["mfi"]]
+        
+        if (sample_size) {
+            res = tapply(mfi, list(probe_name, target_spec_name), length)
+        }else{
+            res = tapply(mfi, list(probe_name, target_spec_name), mean, 
+                         na.rm=TRUE)    
+        }
+        
+        df = data.frame("probe_conc"=rep(k, nrow(res)),
+                        probe_name=rownames(res),
+                        check.names = F)
+        df = cbind(df, round(res))
+        hold[[k]] = df
+    }
+    hold = do.call(rbind, hold)
+    rownames(hold) = NULL
+    
+    return(hold)
+}
+
+make_res_table = function(adam, table_type) {
+    if (table_type == "Probe x Conc") {
+        res = titration_res_table(adam)
+    }else{
+        res = single_dose_res_table(adam)
+    }
+    
+    d = rowSums(is.na(res[,-c(1, 2),drop=F])) == (ncol(res)-2)
+    res = res[!d,,drop=F]
+    return(res)
+    
+}
+
+
+plot_res_table = function(res, ncut=38) {
+    # mnc = max(nchar(res[,1]))
+    # rn_ = sprintf(paste0("%-", mnc, "s"), res[,1])
+    # rn = paste0(rn_,  " ", res[, 2])
+    rn = paste0(res[,2], " ", res[,1])
+    
+    MAT = res[,-c(1, 2),drop=F]
+    rownames(MAT) = rn
+    
+    # graph params
+    cellheight = 15
+    cellwidth = 35
+    legend = FALSE
+    border_color = "white"
+    number_color = "black"
+    cluster_rows = FALSE
+    
+    max_mfi = max(MAT, na.rm = TRUE)
+    N = 100
+    breaks = seq(0, max_mfi, length.out = N + 1)
+    colors = colorRampPalette(rev(RColorBrewer::brewer.pal(n = 7, name = "RdYlBu")))(N)
+    
+    # split heatmap matrix
+    nr = nrow(MAT)
+    s = floor(nr / ncut) + 1
+    s_ = rep(1:s, each=ncut)[1:nr]
+    ls_ = length(s_)
+    if (ls_ > 1) {
+        if (sum(s_==s_[ls_]) == 1) s_[ls_] = s_[ls_ - 1]
+    }
+    
+    mat_list = split(as.data.frame(MAT), s_)
+    lm_ = length(mat_list)
+    for (i in 1:lm_) {
+        main = paste0("Probe Conc: (ug/ml)",
+                      "\nProbe x Target Spec (Results: MFI)")
+        
+        mat = mat_list[[i]]
+        txt = round(mat)
+        txt[is.na(txt)] = "."
+        
+        pheatmap::pheatmap(mat,
+                           cluster_rows=cluster_rows,
+                           cluster_cols=FALSE,
+                           cellwidth=cellwidth,
+                           cellheight=cellheight,
+                           breaks=breaks,
+                           color=colors,
+                           border_color=border_color,
+                           display_numbers=txt,
+                           number_color=number_color,
+                           main=main,
+                           legend=legend)
+        
+        msg = paste0("Date: ", Sys.Date(), " | ",
+                     "Page ", i , "/", lm_)
+        grid.text(msg, x=0.5, y=0.98, gp=gpar(fontsize=10))
+    }
+    
+    # # p <- pheatmap::pheatmap(mat, fontsize_row = 9, silent = TRUE)
+    # 
+    # # Find and modify the row names grob
+    # grid.newpage()
+    # p$gtable$grobs[[which(p$gtable$layout$name == "row_names")]]$gp$fontfamily <- "mono"
+    # grid.draw(p$gtable)
+    
+    
 }
