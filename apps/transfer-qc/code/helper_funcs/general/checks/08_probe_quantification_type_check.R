@@ -10,7 +10,8 @@ probe_quantification_type_check = function(probe_quantification_type) {
     
         is_identical = x == names(sort(-table(x)))[1]
 
-        expected_probe_quant_type = c("concentration (ug/ml)",
+        expected_probe_quant_type = c("concentration (nM)",
+                                      "concentration (ug/ml)",
                                       "e:t ratio",
                                       "dilution factor",
                                       "car-t dilution",

@@ -77,6 +77,19 @@ application_page = bslib::nav_panel(
         ")
     ),
 
+    tags$script(
+        HTML("
+            function sendButtonID(id) {
+            Shiny.setInputValue('last_cell_clicked', id);
+            }
+
+            Shiny.addCustomMessageHandler('toggleBtn', function(msg) {
+                var btn = document.getElementById(msg.id);
+                if (btn) btn.disabled = msg.disable;
+            });
+        ")
+    ),
+    
     title = "Flow Cytometry TLGs",
     page_banner("Make flow cytometry tables, graphs, and listings"),
 

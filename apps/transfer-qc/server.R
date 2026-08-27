@@ -505,6 +505,8 @@ server = function(input, output, session) {
     
     # step 5: message box
     observe({
+        print(input$last_cell_clicked)
+        
         if (isTruthy(input$last_cell_clicked)) {
             removeUI(selector = "#detailed_message_box")
         }

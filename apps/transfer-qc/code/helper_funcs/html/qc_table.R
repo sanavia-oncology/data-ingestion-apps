@@ -64,34 +64,17 @@ qc_table = function(error_matrix, show_rownames=TRUE) {
           
             if (cell_msg=="Pass") {
                 bs_update = paste(bs, "background-color: #51b551ff;")
-                
-                cell_id = paste0(rnam, "-", gsub(" ", "_", qc_check_groups[i]))
-                
-                cell_msg_b = tags$button(cell_msg, 
-                                         style = bs_update, 
-                                         class = "cell-btn",
-                                         id = cell_id,
-                                         onclick = "")
-                
             }else{
                 bs_update = paste(bs, "background-color: #e54c4cff;")
-                
-                cell_id = paste0(rnam, "-", gsub(" ", "_", qc_check_groups[i]))
-                
-                cell_msg_b = tags$button(cell_msg, 
-                                         style = bs_update, 
-                                         class = "cell-btn",
-                                         id = cell_id,
-                                         onclick = "sendButtonID(this.id)")
             }
             
-            # cell_id = paste0(rnam, "-", gsub(" ", "_", qc_check_groups[i]))
-            # 
-            # cell_msg_b = tags$button(cell_msg, 
-            #                          style = bs_update, 
-            #                          class = "cell-btn",
-            #                          id = cell_id,
-            #                          onclick = "sendButtonID(this.id)")
+            cell_id = paste0(rnam, "-", gsub(" ", "_", qc_check_groups[i]))
+
+            cell_msg_b = tags$button(cell_msg,
+                                     style = bs_update,
+                                     class = "cell-btn",
+                                     id = cell_id,
+                                     onclick = "sendButtonID(this.id)")
           
             tab_row[[i+1]] = tags$td(cell_msg_b, style=cell_style)
         }
