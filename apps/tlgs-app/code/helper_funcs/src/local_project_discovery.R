@@ -56,7 +56,10 @@ results_summary_list = function(project_fldr) {
         
         tab = do.call(rbind, hold)
         tab = as.data.frame(tab)
+        o = rev(order(tab[,"date_created"]))
+        tab = tab[o,,drop=F]
         rownames(tab) = NULL
+        
         res = list(front_page_table=tab, 
                    unique_cell_lines=hold_cls,
                    unique_probes=hold_probes,
@@ -65,6 +68,7 @@ results_summary_list = function(project_fldr) {
                    author_gating=author_gating,
                    "conc [min, max] (ug/ml)"=crng,
                    plates_n=nplates)
+        
         return(res)
     }else{
         return(NA)

@@ -114,21 +114,21 @@ server = function(input, output, session) {
             class = "col",
             id    = "main_contents_col2",
             tags$div(id = "main_contents_col2_1"),
-            tags$p("Load all samples",
-                   class = "h4 text-primary fw-bold"),
-            tags$p("Load database and proceed to select cell lines and probes of interest.",
-                   class = "text-secondary"),
-            
-            actionButton("load_all_data",
-                         "Load All Samples",
-                         class = "btn-warning w-50",
-                         disabled = FALSE),
-            
-            tags$p(""),
-            tags$br(),
-            tags$p("Or",
-                   class = "h6 text-secondary"),
-            tags$br(),
+            # tags$p("Load all samples",
+            #        class = "h4 text-primary fw-bold"),
+            # tags$p("Load database and proceed to select cell lines and probes of interest.",
+            #        class = "text-secondary"),
+            # 
+            # actionButton("load_all_data",
+            #              "Load All Samples",
+            #              class = "btn-warning w-50",
+            #              disabled = FALSE),
+            # 
+            # tags$p(""),
+            # tags$br(),
+            # tags$p("Or",
+            #        class = "h6 text-secondary"),
+            # tags$br(),
             
             tags$p("Select specific projects",
                    class = "h4 text-secondary"),
@@ -137,8 +137,8 @@ server = function(input, output, session) {
                    class = "text-secondary"),
             
             actionButton("select_projects",
-                         "Select Projects",
-                         class = "btn-secondary w-50",
+                         "Go to Select Projects",
+                         class = "btn-warning w-50",
                          disabled = FALSE),
         )
         
@@ -289,21 +289,21 @@ server = function(input, output, session) {
             class = "col",
             id    = "main_contents_col2",
             tags$div(id = "main_contents_col2_1"),
-            tags$p("Load all samples",
-                   class = "h4 text-primary fw-bold"),
-            tags$p("Load database and proceed to select cell lines and probes of interest.",
-                   class = "text-secondary"),
-            
-            actionButton("load_all_data",
-                         "Load All Samples",
-                         class = "btn-warning w-50",
-                         disabled = FALSE),
-            
-            tags$p(""),
-            tags$br(),
-            tags$p("Or",
-                   class = "h6 text-secondary"),
-            tags$br(),
+            # tags$p("Load all samples",
+            #        class = "h4 text-primary fw-bold"),
+            # tags$p("Load database and proceed to select cell lines and probes of interest.",
+            #        class = "text-secondary"),
+            # 
+            # actionButton("load_all_data",
+            #              "Load All Samples",
+            #              class = "btn-warning w-50",
+            #              disabled = FALSE),
+            # 
+            # tags$p(""),
+            # tags$br(),
+            # tags$p("Or",
+            #        class = "h6 text-secondary"),
+            # tags$br(),
             
             tags$p("Select specific projects",
                    class = "h4 text-secondary"),
@@ -312,8 +312,8 @@ server = function(input, output, session) {
                    class = "text-secondary"),
             
             actionButton("select_projects",
-                         "Select Projects",
-                         class = "btn-secondary w-50",
+                         "Go to Select Projects",
+                         class = "btn-warning w-50",
                          disabled = FALSE),
         )
         
@@ -340,208 +340,208 @@ server = function(input, output, session) {
         
     }) |> bindEvent(input$go_back_to_front_page)
     
-    # 2a. load all data and proceed to probe housekeeping
-    observe({
-        if (isTruthy(input$load_all_data)) {
-            removeUI(selector = "#main_contents1")
-            removeUI(selector = "#load_project")
-            removeUI(selector = "#card_div")
-        }
-        
-        insertUI(
-            selector="#card_div_top",
-            where = "afterEnd",
-            ui = tags$div(
-                id = "card_div",
-                tags$p("Session name",
-                       class="h6 text-primary fw-bold"),
-                tags$p(input_react_vals$session_name,
-                       class="h6 text-secondary"),
-                tags$br(),
-                actionButton(
-                    "go_back_to_front_page",
-                    "Go Back To Front Page",
-                    class="wt-100"
-                )
-            )
-        )
-        
-        table_front_page = input_react_vals$table_front_page
-        sel_projs = 1:nrow(table_front_page)
-        selected_project_paths = table_front_page[["full_path"]][sel_projs]
-        selected_proj_group = table_front_page[["proj_group"]][sel_projs]
-        selected_proj_name = table_front_page[["project_name"]][sel_projs]
-        selected_proj_ch = table_front_page[["mfi_channel"]][sel_projs]
-        
-        tmp = list()
-        for (k in 1:length(selected_project_paths)) {
-            tmp_dat = read.csv(selected_project_paths[k],
-                               header = TRUE,
-                               check.names = FALSE)
-            tmp_dat$project_group = selected_proj_group[k]
-            tmp_dat$project_name = selected_proj_name[k]
-            tmp_dat$mfi_channel = selected_proj_ch[k]
-            tmp[[k]] = tmp_dat
-        }
-        dat = do.call(rbind, tmp)
-        to_keep = grep("^Keep", dat[["to_drop"]])
-        dat = dat[to_keep,,drop=F]
-        rownames(dat) = NULL
-        
-        probe_id = sort(unique(dat[["Probe ID"]]))
-        target_spec_id = sort(unique(dat[["Target Spec ID"]]))
-        
-        probe_dict = data.frame(probe_id = probe_id,
-                                has_alias = "No",
-                                probe_alias = "no_alias")
-        
-        target_spec_dict = data.frame(target_spec_id = target_spec_id,
-                                      has_alias = "No",
-                                      target_spec_alias = "no_alias")
-        
-        probe_id_dict = read.csv(paste0(app_dir,
-                                        "www/docs/probe_dict/20260712-probe-info.csv"),
-                                 header = T, check.names = F)
-        
-        probe_alias = probe_id_dict[["probe_alias"]]
-        names(probe_alias) = probe_id_dict[["probe_id"]]
-        
-        probe_alias_ = probe_alias[probe_dict$probe_id]
-        is_updated = !is.na(probe_alias_)
-        probe_dict$has_alias[is_updated] = "Yes"
-        probe_alias_[!is_updated] = "no_alias"
-        probe_dict$probe_alias = probe_alias_
-        
-        target_id_dict = read.csv(paste0(app_dir,
-                                         "www/docs/target_dict/20260712-target-dict.csv"),
-                                  header = T, check.names = F)
-        
-        target_alias = target_id_dict[["target_spec_alias"]]
-        names(target_alias) = target_id_dict[["target_spec_id"]]
-        
-        target_alias_ = target_alias[target_spec_dict$target_spec_id]
-        is_updated = !is.na(target_alias_)
-        target_spec_dict$has_alias[is_updated] = "Yes"
-        target_alias_[!is_updated] = "no_alias"
-        target_spec_dict$target_spec_alias = target_alias_
-        
-        input_react_vals$dat = dat
-        input_react_vals$probe_dict = probe_dict
-        input_react_vals$target_spec_dict = target_spec_dict
-        
-        output$probe_dict = DT::renderDataTable(DT::datatable({
-            data = probe_dict
-            if (input$has_alias != "All") {
-                data = data[data[["has_alias"]] == input$has_alias,]
-            }
-            data
-        },
-        selection = 'none',
-        options = list(pageLength = 5,
-                       dom = "tpf",
-                       columnDefs = list(
-                           list(className = 'dt-nowrap', targets = '_all'))
-        )))
-        
-        insert_me1 = tags$div(
-            id = "ref_probe_id_div",
-            tags$div(
-                class="row",
-                tags$div(
-                    id = "ref_probe_id_div2",
-                    tags$p("Probe names (housekeeping)",
-                           class="h3 text-primary fw-bold"),
-                    tags$p("Load a probe_id dictionary sheet.",
-                           class="text-secondary")
-                )
-            ),
-            tags$div(
-                class="row",
-                fileInput("file1", "Choose CSV File", accept=".csv")
-            ),
-            tags$div(
-                class="row",
-                tags$div(
-                    class="col",
-                    id = "update_probe_ids",
-                    actionButton("add_probe_alias",
-                                 "Update Probe ID Alias",
-                                 class="btn-warning",
-                                 width="100%",
-                                 disabled=FALSE)
-                ),
-                tags$div(
-                    class="col",
-                    id = "proceed_to_target_id",
-                    actionButton("target_id",
-                                 "Proceed to Target IDs",
-                                 class="btn-secondary",
-                                 width="100%")
-                )
-            )
-        )
-        
-        check = probe_dict$has_alias == "Yes"
-        msg = paste0(sum(check), " / ", length(check),
-                     " (", round(mean(check)*100, 2),
-                     "%) probe_ids have a probe_alias.")
-        
-        insert_me2 = tags$div(
-            tags$div(
-                class="row",
-                tags$p("Probe alias table",
-                       class="h3 text-primary fw-bold"),
-                tags$p("Check whether plate info. probe_id has an alias.
-                   If has no_alias then probe_id will be used in TLGs.",
-                       class="text-secondary"),
-                fluidRow(
-                    selectInput("has_alias",
-                                "Has alias?",
-                                c("All", "No", "Yes"))
-                ),
-                DT::dataTableOutput("probe_dict")
-            ),
-            tags$div(
-                class="row",
-                tags$p("Match Rate",
-                       class="h6 text-secondary fw-bold"),
-                tags$p(msg,
-                       class="h6 text-secondary"),
-                tags$p(""),
-                tags$br(),
-                tags$div(
-                    class="col",
-                    downloadButton("probe_dict_download_csv", 
-                                   "Download Probe Dict as CSV")
-                )
-            )
-        )
-        
-        insertUI(
-            selector = "#main_contents",
-            where = "afterEnd",
-            ui = tags$div(
-                id = "main_contents1",
-                tags$div(
-                    class="row",
-                    tags$div(
-                        class="col",
-                        id = "main_contents_col1",
-                        insert_me1
-                    ),
-                    tags$div(
-                        class="col",
-                        id = "main_contents_col2",
-                        tags$div(
-                            id = "main_contents_col2_topmark_div",
-                        ),
-                        insert_me2
-                    )
-                )
-            )
-        )
-        
-    }) |> bindEvent(input$load_all_data)
+    # # 2a. load all data and proceed to probe housekeeping
+    # observe({
+    #     if (isTruthy(input$load_all_data)) {
+    #         removeUI(selector = "#main_contents1")
+    #         removeUI(selector = "#load_project")
+    #         removeUI(selector = "#card_div")
+    #     }
+    #     
+    #     insertUI(
+    #         selector="#card_div_top",
+    #         where = "afterEnd",
+    #         ui = tags$div(
+    #             id = "card_div",
+    #             tags$p("Session name",
+    #                    class="h6 text-primary fw-bold"),
+    #             tags$p(input_react_vals$session_name,
+    #                    class="h6 text-secondary"),
+    #             tags$br(),
+    #             actionButton(
+    #                 "go_back_to_front_page",
+    #                 "Go Back To Front Page",
+    #                 class="wt-100"
+    #             )
+    #         )
+    #     )
+    #     
+    #     table_front_page = input_react_vals$table_front_page
+    #     sel_projs = 1:nrow(table_front_page)
+    #     selected_project_paths = table_front_page[["full_path"]][sel_projs]
+    #     selected_proj_group = table_front_page[["proj_group"]][sel_projs]
+    #     selected_proj_name = table_front_page[["project_name"]][sel_projs]
+    #     selected_proj_ch = table_front_page[["mfi_channel"]][sel_projs]
+    #     
+    #     tmp = list()
+    #     for (k in 1:length(selected_project_paths)) {
+    #         tmp_dat = read.csv(selected_project_paths[k],
+    #                            header = TRUE,
+    #                            check.names = FALSE)
+    #         tmp_dat$project_group = selected_proj_group[k]
+    #         tmp_dat$project_name = selected_proj_name[k]
+    #         tmp_dat$mfi_channel = selected_proj_ch[k]
+    #         tmp[[k]] = tmp_dat
+    #     }
+    #     dat = do.call(rbind, tmp)
+    #     to_keep = grep("^Keep", dat[["to_drop"]])
+    #     dat = dat[to_keep,,drop=F]
+    #     rownames(dat) = NULL
+    #     
+    #     probe_id = sort(unique(dat[["Probe ID"]]))
+    #     target_spec_id = sort(unique(dat[["Target Spec ID"]]))
+    #     
+    #     probe_dict = data.frame(probe_id = probe_id,
+    #                             has_alias = "No",
+    #                             probe_alias = "no_alias")
+    #     
+    #     target_spec_dict = data.frame(target_spec_id = target_spec_id,
+    #                                   has_alias = "No",
+    #                                   target_spec_alias = "no_alias")
+    #     
+    #     probe_id_dict = read.csv(paste0(app_dir,
+    #                                     "www/docs/probe_dict/20260712-probe-info.csv"),
+    #                              header = T, check.names = F)
+    #     
+    #     probe_alias = probe_id_dict[["probe_alias"]]
+    #     names(probe_alias) = probe_id_dict[["probe_id"]]
+    #     
+    #     probe_alias_ = probe_alias[probe_dict$probe_id]
+    #     is_updated = !is.na(probe_alias_)
+    #     probe_dict$has_alias[is_updated] = "Yes"
+    #     probe_alias_[!is_updated] = "no_alias"
+    #     probe_dict$probe_alias = probe_alias_
+    #     
+    #     target_id_dict = read.csv(paste0(app_dir,
+    #                                      "www/docs/target_dict/20260712-target-dict.csv"),
+    #                               header = T, check.names = F)
+    #     
+    #     target_alias = target_id_dict[["target_spec_alias"]]
+    #     names(target_alias) = target_id_dict[["target_spec_id"]]
+    #     
+    #     target_alias_ = target_alias[target_spec_dict$target_spec_id]
+    #     is_updated = !is.na(target_alias_)
+    #     target_spec_dict$has_alias[is_updated] = "Yes"
+    #     target_alias_[!is_updated] = "no_alias"
+    #     target_spec_dict$target_spec_alias = target_alias_
+    #     
+    #     input_react_vals$dat = dat
+    #     input_react_vals$probe_dict = probe_dict
+    #     input_react_vals$target_spec_dict = target_spec_dict
+    #     
+    #     output$probe_dict = DT::renderDataTable(DT::datatable({
+    #         data = probe_dict
+    #         if (input$has_alias != "All") {
+    #             data = data[data[["has_alias"]] == input$has_alias,]
+    #         }
+    #         data
+    #     },
+    #     selection = 'none',
+    #     options = list(pageLength = 5,
+    #                    dom = "tpf",
+    #                    columnDefs = list(
+    #                        list(className = 'dt-nowrap', targets = '_all'))
+    #     )))
+    #     
+    #     insert_me1 = tags$div(
+    #         id = "ref_probe_id_div",
+    #         tags$div(
+    #             class="row",
+    #             tags$div(
+    #                 id = "ref_probe_id_div2",
+    #                 tags$p("Probe names (housekeeping)",
+    #                        class="h3 text-primary fw-bold"),
+    #                 tags$p("Load a probe_id dictionary sheet.",
+    #                        class="text-secondary")
+    #             )
+    #         ),
+    #         tags$div(
+    #             class="row",
+    #             fileInput("file1", "Choose CSV File", accept=".csv")
+    #         ),
+    #         tags$div(
+    #             class="row",
+    #             tags$div(
+    #                 class="col",
+    #                 id = "update_probe_ids",
+    #                 actionButton("add_probe_alias",
+    #                              "Update Probe ID Alias",
+    #                              class="btn-warning",
+    #                              width="100%",
+    #                              disabled=FALSE)
+    #             ),
+    #             tags$div(
+    #                 class="col",
+    #                 id = "proceed_to_target_id",
+    #                 actionButton("target_id",
+    #                              "Proceed to Target IDs",
+    #                              class="btn-secondary",
+    #                              width="100%")
+    #             )
+    #         )
+    #     )
+    #     
+    #     check = probe_dict$has_alias == "Yes"
+    #     msg = paste0(sum(check), " / ", length(check),
+    #                  " (", round(mean(check)*100, 2),
+    #                  "%) probe_ids have a probe_alias.")
+    #     
+    #     insert_me2 = tags$div(
+    #         tags$div(
+    #             class="row",
+    #             tags$p("Probe alias table",
+    #                    class="h3 text-primary fw-bold"),
+    #             tags$p("Check whether plate info. probe_id has an alias.
+    #                If has no_alias then probe_id will be used in TLGs.",
+    #                    class="text-secondary"),
+    #             fluidRow(
+    #                 selectInput("has_alias",
+    #                             "Has alias?",
+    #                             c("All", "No", "Yes"))
+    #             ),
+    #             DT::dataTableOutput("probe_dict")
+    #         ),
+    #         tags$div(
+    #             class="row",
+    #             tags$p("Match Rate",
+    #                    class="h6 text-secondary fw-bold"),
+    #             tags$p(msg,
+    #                    class="h6 text-secondary"),
+    #             tags$p(""),
+    #             tags$br(),
+    #             tags$div(
+    #                 class="col",
+    #                 downloadButton("probe_dict_download_csv", 
+    #                                "Download Probe Dict as CSV")
+    #             )
+    #         )
+    #     )
+    #     
+    #     insertUI(
+    #         selector = "#main_contents",
+    #         where = "afterEnd",
+    #         ui = tags$div(
+    #             id = "main_contents1",
+    #             tags$div(
+    #                 class="row",
+    #                 tags$div(
+    #                     class="col",
+    #                     id = "main_contents_col1",
+    #                     insert_me1
+    #                 ),
+    #                 tags$div(
+    #                     class="col",
+    #                     id = "main_contents_col2",
+    #                     tags$div(
+    #                         id = "main_contents_col2_topmark_div",
+    #                     ),
+    #                     insert_me2
+    #                 )
+    #             )
+    #         )
+    #     )
+    #     
+    # }) |> bindEvent(input$load_all_data)
     
     # 2b. go to select projects page
     observe({
@@ -2748,257 +2748,273 @@ server = function(input, output, session) {
                      "gMFI")
             
             adam = cleaned_dat[row_select, scol, drop=F]
-            colnames(adam) =  c("platename",
-                                "position",
-                                "expr_type",
-                                "dose_type",
-                                "target_spec_name",
-                                "probe_name",
-                                "conc (ug/ml)",
-                                "mfi")
             
-            adam$expr_type = ifelse(adam$expr_type=="RL1-H","binding",
-                                    ifelse(adam$expr_type=="YL1-H", "internalization", 
-                                           "unknown"))
+            pqt = cleaned_dat[,"Probe Quant Type"]
+            upqt = unique(sapply(strsplit(pqt, "\\("), "[[", 2))
             
-            adam$mfi = round(adam$mfi)
-            plate_col = as.numeric(gsub("[A-Z]", "", adam[["position"]]))
-            plate_row = substr(adam[["position"]], 1, 1)
-            adam = cbind(plate_row=plate_row,
-                         plate_col=plate_col,
-                         adam)
-            
-            adam = dup_analysis(adam)
-            rownames(adam) = NULL
-            
-            notes = rep("none", nrow(adam))
-            Note = factor(notes, levels = c("none",
-                                            "neg_ref",
-                                            "benchmark",
-                                            "drop"))
-            adam$notes = Note
-            
-            probe_order_df = probe_order_react_val()
-            probe_levels = probe_order_df$probe_name
-            target_levels = input$select_cell_lines
-            
-            if ("All Cell Lines" %in% target_levels) {
-                target_levels = sort(as.character(unique(adam$target_spec_name)))
-            }
-            
-            adam$probe_name = factor(as.character(adam$probe_name), 
-                                     levels=probe_levels)
-            adam$target_spec_name = factor(as.character(adam$target_spec_name), 
-                                           levels=target_levels)
-            
-            analysis_dataset(adam)
-            
-            hide_cols = c(1, 2, 5, 6, 11)
-            
-            output$adam_table = DT::renderDataTable(DT::datatable({
-                data = adam
-                data$probe_name = as.character(data$probe_name)
-                data$target_spec_name = as.character(data$target_spec_name)
-                if (isTruthy(input$platename) && input$platename != "All")
-                    data = data[data$platename == input$platename, , drop = FALSE]
-                if (isTruthy(input$plate_row) && input$plate_row != "All")
-                    data = data[data$plate_row == input$plate_row, , drop = FALSE]
-                if (isTruthy(input$plate_col) && input$plate_col != "All")
-                    data = data[data$plate_col == input$plate_col, , drop = FALSE]
-                if (isTruthy(input$target_spec_name) && input$target_spec_name != "All")
-                    data = data[data$target_spec_name == input$target_spec_name, , drop = FALSE]
-                if (isTruthy(input$probe_name) && input$probe_name != "All")
-                    data = data[data$probe_name == input$probe_name, , drop = FALSE]
-                if (isTruthy(input$duplicates) && input$duplicates != "All")
-                    data = data[data$duplicates == input$duplicates, , drop = FALSE]
-                
-                data
-            },
-            selection = 'multiple',
-            options = list(pageLength = 6,
-                           dom = "tpf",
-                           columnDefs = list(
-                               list(className = 'dt-nowrap', targets = '_all'),
-                               list(visible = FALSE, targets = hide_cols))
-            )))
-            
-            output$notes_table = renderTable(
-                                        notes_summary_func(adam$notes), 
-                                        striped = TRUE,
-                                        spacing = "xs")
-
-            adam_plot(adam, 
-                      sample_names = NULL, 
-                      group_name = NULL, 
-                      filename = paste0(app_dir, 
-                                        "www/img/adam-graph-home.pdf"), 
-                      session_name = input_react_vals$session_name)
-            
-            filters = tags$div(
-                id = "all_filters_div",
-                fluidRow(
-                    selectInput("platename",
-                                "platename",
-                                c("All",
-                                  sort(unique(adam[["platename"]]))),
-                                width="275px"),
-                    selectInput("plate_row",
-                                "plate_row",
-                                c("All",
-                                  sort(unique(adam[["plate_row"]]))),
-                                width="275px"),
-                    selectInput("plate_col",
-                                "plate_col",
-                                c("All",
-                                  sort(unique(adam[["plate_col"]]))),
-                                width="275px"),
-                    selectInput("target_spec_name",
-                                "target_spec_name",
-                                c("All",
-                                  sort(unique(as.character(adam[["target_spec_name"]])))),
-                                width="275px"),
-                    selectInput("probe_name",
-                                "probe_name",
-                                c("All",
-                                  sort(as.character(unique(adam[["probe_name"]])))),
-                                width="275px"),
-                    selectInput("duplicates",
-                                "duplicates",
-                                c("All",
-                                  sort(unique(adam[["duplicates"]]))),
-                                width="275px")
+            if (length(upqt) > 1) {
+                showNotification(
+                    ui = "There are different units for probe concentration. Can not proceed. Talk to Kwame.",
+                    type = "message",
+                    duration = 2
                 )
-            )
-
-            # column1
-            insert_me1 = tags$div(
-                tags$p(paste0("Analysis dataset -- sample size: ",
-                              nrow(adam), 
-                              " -- select rows to add notes"),
-                       class="h5 text-primary fw-bold"),
+            }else{
+                acn = c("platename",
+                        "position",
+                        "expr_type",
+                        "dose_type",
+                        "target_spec_name",
+                        "probe_name",
+                        "conc",
+                        "mfi")
+                acn[acn=="conc"] = paste0("conc (", upqt)
                 
-                tags$div(
-                    id="table_filter_div_top",
-                ),
+                colnames(adam) =  acn
                 
-                tags$div(
-                    id="table_filter_div",
-                    class = "col",
-                    filters,
-                    DT::DTOutput("adam_table"),
-                    tags$div(
-                        class="row",
-                        tags$div(
-                            class="col",
-                            downloadButton("adam_download_csv",
-                                           "Download Analysis Data as CSV")
-                        ),
-                        tags$div(
-                            class="col",
-                                ""
-                        )
+                adam$expr_type = ifelse(adam$expr_type=="RL1-H","binding",
+                                        ifelse(adam$expr_type=="YL1-H", "internalization", 
+                                               "unknown"))
+                
+                adam$mfi = round(adam$mfi)
+                plate_col = as.numeric(gsub("[A-Z]", "", adam[["position"]]))
+                plate_row = substr(adam[["position"]], 1, 1)
+                adam = cbind(plate_row=plate_row,
+                             plate_col=plate_col,
+                             adam)
+                
+                adam = dup_analysis(adam)
+                rownames(adam) = NULL
+                
+                notes = rep("none", nrow(adam))
+                Note = factor(notes, levels = c("none",
+                                                "neg_ref",
+                                                "benchmark",
+                                                "drop"))
+                adam$notes = Note
+                
+                probe_order_df = probe_order_react_val()
+                probe_levels = probe_order_df$probe_name
+                target_levels = input$select_cell_lines
+                
+                if ("All Cell Lines" %in% target_levels) {
+                    target_levels = sort(as.character(unique(adam$target_spec_name)))
+                }
+                
+                adam$probe_name = factor(as.character(adam$probe_name), 
+                                         levels=probe_levels)
+                adam$target_spec_name = factor(as.character(adam$target_spec_name), 
+                                               levels=target_levels)
+                
+                analysis_dataset(adam)
+                
+                hide_cols = c(1, 2, 5, 6, 11)
+                
+                output$adam_table = DT::renderDataTable(DT::datatable({
+                    data = adam
+                    data$probe_name = as.character(data$probe_name)
+                    data$target_spec_name = as.character(data$target_spec_name)
+                    if (isTruthy(input$platename) && input$platename != "All")
+                        data = data[data$platename == input$platename, , drop = FALSE]
+                    if (isTruthy(input$plate_row) && input$plate_row != "All")
+                        data = data[data$plate_row == input$plate_row, , drop = FALSE]
+                    if (isTruthy(input$plate_col) && input$plate_col != "All")
+                        data = data[data$plate_col == input$plate_col, , drop = FALSE]
+                    if (isTruthy(input$target_spec_name) && input$target_spec_name != "All")
+                        data = data[data$target_spec_name == input$target_spec_name, , drop = FALSE]
+                    if (isTruthy(input$probe_name) && input$probe_name != "All")
+                        data = data[data$probe_name == input$probe_name, , drop = FALSE]
+                    if (isTruthy(input$duplicates) && input$duplicates != "All")
+                        data = data[data$duplicates == input$duplicates, , drop = FALSE]
+                    
+                    data
+                },
+                selection = 'multiple',
+                options = list(pageLength = 6,
+                               dom = "tpf",
+                               columnDefs = list(
+                                   list(className = 'dt-nowrap', targets = '_all'),
+                                   list(visible = FALSE, targets = hide_cols))
+                )))
+                
+                output$notes_table = renderTable(
+                    notes_summary_func(adam$notes), 
+                    striped = TRUE,
+                    spacing = "xs")
+                
+                adam_plot(adam, 
+                          sample_names = NULL, 
+                          group_name = NULL, 
+                          filename = paste0(app_dir, 
+                                            "www/img/adam-graph-home.pdf"), 
+                          session_name = input_react_vals$session_name)
+                
+                filters = tags$div(
+                    id = "all_filters_div",
+                    fluidRow(
+                        selectInput("platename",
+                                    "platename",
+                                    c("All",
+                                      sort(unique(adam[["platename"]]))),
+                                    width="275px"),
+                        selectInput("plate_row",
+                                    "plate_row",
+                                    c("All",
+                                      sort(unique(adam[["plate_row"]]))),
+                                    width="275px"),
+                        selectInput("plate_col",
+                                    "plate_col",
+                                    c("All",
+                                      sort(unique(adam[["plate_col"]]))),
+                                    width="275px"),
+                        selectInput("target_spec_name",
+                                    "target_spec_name",
+                                    c("All",
+                                      sort(unique(as.character(adam[["target_spec_name"]])))),
+                                    width="275px"),
+                        selectInput("probe_name",
+                                    "probe_name",
+                                    c("All",
+                                      sort(as.character(unique(adam[["probe_name"]])))),
+                                    width="275px"),
+                        selectInput("duplicates",
+                                    "duplicates",
+                                    c("All",
+                                      sort(unique(adam[["duplicates"]]))),
+                                    width="275px")
                     )
                 )
-            )
-            
-            insert_me2 = tags$div(
-                id="annotation_pannel_div_top",
                 
-                tags$p("Annotation pannel",
-                       class="h5 text-primary fw-bold"),
-              
-                tags$div(
-                    class="row",
+                # column1
+                insert_me1 = tags$div(
+                    tags$p(paste0("Analysis dataset -- sample size: ",
+                                  nrow(adam), 
+                                  " -- select rows to add notes"),
+                           class="h5 text-primary fw-bold"),
+                    
                     tags$div(
-                        class="col",
-                        radioButtons(
-                            inputId = "note_radio",
-                            label = "Label the selected probe(s)",
-                            choices = list(
-                                "None" = "none",
-                                "Negative reference" = "neg_ref",
-                                "Benchmark" = "benchmark",
-                                "Drop" = "drop"
+                        id="table_filter_div_top",
+                    ),
+                    
+                    tags$div(
+                        id="table_filter_div",
+                        class = "col",
+                        filters,
+                        DT::DTOutput("adam_table"),
+                        tags$div(
+                            class="row",
+                            tags$div(
+                                class="col",
+                                downloadButton("adam_download_csv",
+                                               "Download Analysis Data as CSV")
                             ),
-                            inline = FALSE
+                            tags$div(
+                                class="col",
+                                ""
+                            )
                         )
-                    ),
-                    tags$div(
-                        class="col",
-                        tableOutput("notes_table"),
                     )
-                ),
-
-                tags$div(
-                    class="row",
-                    tags$div(
-                        class="col",
-                        actionButton("annotate_smpl",
-                                     "Note",
-                                     class="btn-warning wt-50",
-                                     width="100%")
-                    ),
-                    tags$div(
-                        class="col",
-                        actionButton("plot_table_selections",
-                                     "Plot",
-                                     class="btn-primary wt-50",
-                                     width="100%")
-                    ),
-                    tags$div(
-                        class="col",
-                        actionButton("proceed_to_tlgs",
-                                     "Proceed",
-                                     class="btn-secondary",
-                                     width="100%")
-                    )
-                ),
-                tags$p(""),
-
-                tags$div(id="adam_plot_div_top"),
+                )
                 
-                tags$div(
-                    id="adam_plot_div",
+                insert_me2 = tags$div(
+                    id="annotation_pannel_div_top",
+                    
+                    tags$p("Annotation pannel",
+                           class="h5 text-primary fw-bold"),
                     
                     tags$div(
                         class="row",
-                        tags$iframe(
-                            src = "img/adam-graph-home.pdf",
-                            width = "400px",
-                            height = "320px",
+                        tags$div(
+                            class="col",
+                            radioButtons(
+                                inputId = "note_radio",
+                                label = "Label the selected probe(s)",
+                                choices = list(
+                                    "None" = "none",
+                                    "Negative reference" = "neg_ref",
+                                    "Benchmark" = "benchmark",
+                                    "Drop" = "drop"
+                                ),
+                                inline = FALSE
+                            )
+                        ),
+                        tags$div(
+                            class="col",
+                            tableOutput("notes_table"),
+                        )
+                    ),
+                    
+                    tags$div(
+                        class="row",
+                        tags$div(
+                            class="col",
+                            actionButton("annotate_smpl",
+                                         "Note",
+                                         class="btn-warning wt-50",
+                                         width="100%")
+                        ),
+                        tags$div(
+                            class="col",
+                            actionButton("plot_table_selections",
+                                         "Plot",
+                                         class="btn-primary wt-50",
+                                         width="100%")
+                        ),
+                        tags$div(
+                            class="col",
+                            actionButton("proceed_to_tlgs",
+                                         "Proceed",
+                                         class="btn-secondary",
+                                         width="100%")
                         )
                     ),
                     tags$p(""),
-                    textInput(
-                        "plot_name",
-                        label = NULL,
-                        placeholder = "(Optional) Enter Plot Name",
-                        width="45%"
-                    )
-                ),
-            )
-            
-            insertUI(
-                selector = "#main_contents",
-                where    = "afterEnd",
-                ui = tags$div(
-                    id = "main_contents1",
+                    
+                    tags$div(id="adam_plot_div_top"),
+                    
                     tags$div(
-                        class = "row",
+                        id="adam_plot_div",
+                        
                         tags$div(
-                            class = "col",
-                            id    = "main_contents_col1",
-                            insert_me1
+                            class="row",
+                            tags$iframe(
+                                src = "img/adam-graph-home.pdf",
+                                width = "400px",
+                                height = "320px",
+                            )
                         ),
+                        tags$p(""),
+                        textInput(
+                            "plot_name",
+                            label = NULL,
+                            placeholder = "(Optional) Enter Plot Name",
+                            width="45%"
+                        )
+                    ),
+                )
+                
+                insertUI(
+                    selector = "#main_contents",
+                    where    = "afterEnd",
+                    ui = tags$div(
+                        id = "main_contents1",
                         tags$div(
-                            class = "col",
-                            id    = "main_contents_col2",
-                            tags$div(id="main_contents_col2_1"),
-                            insert_me2
-                        ),
+                            class = "row",
+                            tags$div(
+                                class = "col",
+                                id    = "main_contents_col1",
+                                insert_me1
+                            ),
+                            tags$div(
+                                class = "col",
+                                id    = "main_contents_col2",
+                                tags$div(id="main_contents_col2_1"),
+                                insert_me2
+                            ),
+                        )
                     )
                 )
-            )
+            }
+            
         }
         
     }) |> bindEvent(input$proceed_to_annot_page)
@@ -3520,14 +3536,19 @@ server = function(input, output, session) {
     observe({
         adam = analysis_dataset()
         adam = adam[!adam$notes %in% "drop",,drop=F]
-        adam$"conc (ug/ml)" = factor(adam$"conc (ug/ml)")
+        
+        cna = colnames(adam)
+        cna = cna[grep("^conc", cna)]
+        adam[,cna] = factor(adam[,cna])
 
         res = make_res_table(adam, input$analysis_type)
+        print(res)
+        
         res_table(res)
         
         filename = paste0(app_dir, "www/docs/tlgs/results-table-heatmap.pdf")
         pdf(filename, width=15, height=10.75)
-        plot_res_table(res)
+        plot_res_table(res, input$analysis_type)
         dev.off()
         
         basic_heatmap = tags$div(

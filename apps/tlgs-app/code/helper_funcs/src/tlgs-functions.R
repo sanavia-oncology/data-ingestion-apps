@@ -52,361 +52,361 @@ get_probe_annotation = function(project_data) {
     sapply(annotation_list, f)
 }
 
-titration_hmap = function(dat, 
-                          cell="cell", 
-                          max_mfi=NULL,
-                          cluster_rows=FALSE, 
-                          ncut=40) {
-
-    # graph params
-    cellheight = 15
-    cellwidth = 35
-    legend = FALSE
-    border_color = "white"
-    number_color = "black"
-    
-    N = 100
-    breaks = seq(0, max_mfi, length.out = N + 1)
-    colors = colorRampPalette(rev(RColorBrewer::brewer.pal(n = 7, name = "RdYlBu")))(N)
-    
-    # data
-    mfi = dat[["mfi"]]
-    probe_id = dat[["probe_name"]]
-    probe_conc = dat[["conc (ug/ml)"]]
-    MAT = tapply(mfi, list(probe_id, probe_conc), mean, na.rm=T)
-    
-    # split heatmap matrix
-    nr = nrow(MAT)
-    s = floor(nr / ncut) + 1
-    s_ = rep(1:s, each=ncut)[1:nr]
-    ls_ = length(s_)
-    if (ls_ > 1) {
-        if (sum(s_==s_[ls_]) == 1) s_[ls_] = s_[ls_ - 1]
-    }
-    
-    mat_list = split(as.data.frame(MAT), s_)
-    lm_ = length(mat_list)
-    for (i in 1:lm_) {
-        main = paste0(cell,
-                      "\nProbe x Conc (ug/ml) Table (Results: MFI)")
-        
-        mat = mat_list[[i]]
-        txt = round(mat)
-        txt[is.na(txt)] = "."
-        
-        pheatmap::pheatmap(mat,
-                           cluster_rows=cluster_rows,
-                           cluster_cols=FALSE,
-                           cellwidth=cellwidth,
-                           cellheight=cellheight,
-                           angle_col=0,
-                           breaks=breaks,
-                           color=colors,
-                           border_color=border_color,
-                           display_numbers=txt,
-                           number_color=number_color,
-                           main=main,
-                           legend=legend)
-        
-        msg = paste0("Date: ", Sys.Date(), " | ",
-                     "Page ", i , "/", lm_)
-        grid.text(msg, x=0.5, y=0.98, gp=gpar(fontsize=10))
-    }
-
-    return(MAT)
-}
-
-titration_sample_size = function(dat, 
-                                 cell="cell", 
-                                 cluster_rows=FALSE, 
-                                 ncut=40) {
-    # graph params
-    cellheight = 15
-    cellwidth = 35
-    legend = FALSE
-    border_color = "white"
-    number_color = "black"
-
-    # data
-    mfi = dat[["mfi"]]
-    probe_id = dat[["probe_name"]]
-    probe_conc = dat[["conc (ug/ml)"]]
-    MAT = tapply(mfi, list(probe_id, probe_conc), length)
-
-    nr = nrow(MAT)
-    s = floor(nr / ncut) + 1
-    s_ = rep(1:s, each=ncut)[1:nr]
-    ls_ = length(s_)
-    if (ls_ > 1) {
-        if (sum(s_==s_[ls_]) == 1) s_[ls_] = s_[ls_ - 1]
-    }
-    
-    mat_list = split(as.data.frame(MAT), s_)
-    lm_ = length(mat_list)
-    
-    for (i in 1:lm_) {
-        main = paste0(cell,
-                      "\nProbe x Conc (ug/ml) Table (Results: Sample Size)")
-        
-        mat = mat_list[[i]]
-        txt = round(mat)
-        txt[is.na(txt)] = "."
-
-        pheatmap::pheatmap(mat,
-                           cluster_rows=cluster_rows,
-                           cluster_cols=FALSE,
-                           cellwidth=cellwidth,
-                           cellheight=cellheight,
-                           angle_col=0,
-                           breaks=c(1, 2),
-                           color=c("aliceblue"),
-                           border_color=border_color,
-                           display_numbers=txt,
-                           number_color=number_color,
-                           main=main,
-                           legend=FALSE)
-        
-        msg = paste0("Date: ", Sys.Date(), " | ",
-                     "Page ", i , "/", lm_)
-        grid.text(msg, x=0.5, y=0.98, gp=gpar(fontsize=10))
-        
-        msg = "Values of cells w/ sample size > 1 are averaged."
-        grid.text(msg, x=0.5, y=0.02, gp=gpar(fontsize=10))
-    }
-    
-}
-
-titration_plot = function(adam, 
-                          sample_size=FALSE, 
-                          max_mfi=NULL) {
-    
-    res_t = split(adam, adam$"target_spec_name")
-    
-    ncells = length(res_t)
-    nsmpls = sum(sapply(res_t, nrow))
-    
-    if (is.null(max_mfi)) {
-        p_max = max(sapply(res_t, function(x) max(x[["mfi"]], na.rm = TRUE)), 
-                    na.rm=T)    
-    }
-    
-    if (!sample_size) {
-        op = par(mar=c(3, 3, 5, 3))
-        
-        plot(0, 0, axes=F, xlab="", ylab="", pch="", main="Titration TLGs",
-             cex.main=1.25)
-        msg = paste0("Titration TLGs\nNumber of cell lines: ", ncells,
-                     "\nNumber of total samples: ", nsmpls)
-        text(0, 0, msg, cex=1.5)
-
-        par(op)
-        
-        hold = list()
-        for (cell in names(res_t)) {
-            res = titration_hmap(res_t[[cell]], cell, max_mfi=p_max)
-            colnames(res) = paste0(colnames(res), " (ug/ml)")
-            df = data.frame("target_spec"=rep(cell, nrow(res)),
-                            probe_name=rownames(res),
-                            check.names = F)
-            df = cbind(df, round(res))
-            hold[[cell]] = df  
-        }
-        hold = do.call(rbind, hold)
-        rownames(hold) = NULL
-        
-    }else{
-        # sample size
-        op = par(mar=c(3, 3, 3, 3))
-        plot(0, 0, axes=F, xlab="", ylab="", pch="")
-        text(0, 0, "Appendix\nSample Size Matrix", cex=1.5)
-        par(op)
-        
-        for (cell in names(res_t)) {
-            titration_sample_size(res_t[[cell]], cell)    
-        }
-        
-        hold = NULL
-    }
-    
-    return(hold)
-}
-
-single_dose_hmap = function(dat,
-                            max_mfi=NULL,
-                            cluster_rows=FALSE,
-                            ncut=38) {
-
-    # graph params
-    cellheight = 15
-    cellwidth = 35
-    legend = FALSE
-    border_color = "white"
-    number_color = "black"
-    
-    N = 100
-    breaks = seq(0, max_mfi, length.out = N + 1)
-    colors = colorRampPalette(rev(RColorBrewer::brewer.pal(n = 7, name = "RdYlBu")))(N)
-    
-    # data
-    target_spec_name = dat[["target_spec_name"]]
-    probe_name = dat[["probe_name"]]
-    mfi = dat[["mfi"]]
-    
-    MAT = tapply(mfi, list(probe_name, target_spec_name), mean, na.rm=TRUE)
-    
-    probe_conc = dat[["conc (ug/ml)"]]             
-    
-    # split heatmap matrix
-    nr = nrow(MAT)
-    s = floor(nr / ncut) + 1
-    s_ = rep(1:s, each=ncut)[1:nr]
-    ls_ = length(s_)
-    if (ls_ > 1) {
-        if (sum(s_==s_[ls_]) == 1) s_[ls_] = s_[ls_ - 1]
-    }
-    
-    mat_list = split(as.data.frame(MAT), s_)
-    lm_ = length(mat_list)
-    for (i in 1:lm_) {
-        main = paste0("Probe Conc: ", probe_conc[1], " (ug/ml)",
-                      "\nProbe x Target Spec (Results: MFI)")
-        
-        mat = mat_list[[i]]
-        txt = round(mat)
-        txt[is.na(txt)] = "."
-        
-        pheatmap::pheatmap(mat,
-                           cluster_rows=cluster_rows,
-                           cluster_cols=FALSE,
-                           cellwidth=cellwidth,
-                           cellheight=cellheight,
-                           breaks=breaks,
-                           color=colors,
-                           border_color=border_color,
-                           display_numbers=txt,
-                           number_color=number_color,
-                           main=main,
-                           legend=legend)
-
-        msg = paste0("Date: ", Sys.Date(), " | ",
-                     "Page ", i , "/", lm_)
-        grid.text(msg, x=0.5, y=0.98, gp=gpar(fontsize=10))
-    }
-    
-    return(MAT)
-}
-
-single_dose_sample_size = function(dat,
-                                   cluster_rows=FALSE, 
-                                   ncut=38) {
-    # graph params
-    cellheight = 15
-    cellwidth = 35
-    legend = FALSE
-    border_color = "white"
-    number_color = "black"
-    
-    # data
-    target_spec_name = dat[["target_spec_name"]]
-    probe_name = dat[["probe_name"]]
-    mfi = dat[["mfi"]]
-    
-    MAT = tapply(mfi, list(probe_name, target_spec_name), length)
-    
-    probe_conc = dat[["conc (ug/ml)"]]             
-    
-    # split heatmap matrix
-    nr = nrow(MAT)
-    s = floor(nr / ncut) + 1
-    s_ = rep(1:s, each=ncut)[1:nr]
-    ls_ = length(s_)
-    if (ls_ > 1) {
-        if (sum(s_==s_[ls_]) == 1) s_[ls_] = s_[ls_ - 1]
-    }
-    
-    mat_list = split(as.data.frame(MAT), s_)
-    lm_ = length(mat_list)
-    
-    for (i in 1:lm_) {
-        main = paste0("Probe Conc: ", probe_conc[1], " (ug/ml)",
-                      "\nProbe x Target Spec (Results: Sample Size)")
-        
-        mat = mat_list[[i]]
-        txt = round(mat)
-        txt[is.na(txt)] = "."
-        pheatmap::pheatmap(mat,
-                           cluster_rows=cluster_rows,
-                           cluster_cols=FALSE,
-                           cellwidth=cellwidth,
-                           cellheight=cellheight,
-                           breaks=c(1, 2),
-                           color=c("aliceblue"),
-                           border_color=border_color,
-                           display_numbers=txt,
-                           number_color=number_color,
-                           main=main,
-                           legend=FALSE)
-        
-        msg = paste0("Date: ", Sys.Date(), " | ",
-                     "Page ", i , "/", lm_)
-        grid.text(msg, x=0.5, y=0.98, gp=gpar(fontsize=10))
-        
-        msg = "Values of cells w/ sample size > 1 are averaged."
-        grid.text(msg, x=0.5, y=0.02, gp=gpar(fontsize=10))
-    }
-    
-}
-
-single_dose_plot = function(adam, 
-                            sample_size=FALSE,
-                            max_mfi=NULL) {
-    res_s = split(adam, adam$"conc (ug/ml)")
-    
-    ncells = length(unique(sapply(res_s, function(x) unique(x[["target_spec_name"]]))))
-    nsmpls = sum(sapply(res_s, nrow))
-    
-    if (is.null(max_mfi)) {
-        p_max = max(sapply(res_s, function(x) max(x[["mfi"]], na.rm = TRUE)), 
-                    na.rm=T)    
-    }
-    
-    if (!sample_size) {
-        op = par(mar=c(3, 3, 5, 3))
-        plot(0, 0, axes=F, xlab="", ylab="", pch="", main="Single Dose TLGs",
-             cex.main=1.25)
-        msg = paste0("Single Dose TLGs\nNumber of cell lines: ", ncells,
-                     "\nNumber of total samples: ", nsmpls)
-        text(0, 0, msg, cex=1.5)
-        par(op)
- 
-        hold1 = list()
-        for (k in names(res_s)) {
-            res = single_dose_hmap(res_s[[k]], max_mfi=p_max)
-            df = data.frame("probe_conc (ug/ml)"=rep(k, nrow(res)),
-                            probe_name=rownames(res),
-                            check.names = F)
-            df = cbind(df, round(res))
-            hold1[[k]] = df
-        }
-        hold1 = do.call(rbind, hold1)
-        rownames(hold1) = NULL
-        
-    }else{
-        # sample size
-        op = par(mar=c(3, 3, 3, 3))
-        plot(0, 0, axes=F, xlab="", ylab="", pch="")
-        text(0, 0, "Appendix\nSample Size Matrix", cex=1.5)
-        par(op)
-        
-        for (k in names(res_s)) {
-            single_dose_sample_size(res_s[[k]])
-        }
-        
-        hold1 = NULL
-    }
-
-    return(hold1)
-}
+# titration_hmap = function(dat, 
+#                           cell="cell", 
+#                           max_mfi=NULL,
+#                           cluster_rows=FALSE, 
+#                           ncut=40) {
+# 
+#     # graph params
+#     cellheight = 15
+#     cellwidth = 35
+#     legend = FALSE
+#     border_color = "white"
+#     number_color = "black"
+#     
+#     N = 100
+#     breaks = seq(0, max_mfi, length.out = N + 1)
+#     colors = colorRampPalette(rev(RColorBrewer::brewer.pal(n = 7, name = "RdYlBu")))(N)
+#     
+#     # data
+#     mfi = dat[["mfi"]]
+#     probe_id = dat[["probe_name"]]
+#     probe_conc = dat[["conc (ug/ml)"]]
+#     MAT = tapply(mfi, list(probe_id, probe_conc), mean, na.rm=T)
+#     
+#     # split heatmap matrix
+#     nr = nrow(MAT)
+#     s = floor(nr / ncut) + 1
+#     s_ = rep(1:s, each=ncut)[1:nr]
+#     ls_ = length(s_)
+#     if (ls_ > 1) {
+#         if (sum(s_==s_[ls_]) == 1) s_[ls_] = s_[ls_ - 1]
+#     }
+#     
+#     mat_list = split(as.data.frame(MAT), s_)
+#     lm_ = length(mat_list)
+#     for (i in 1:lm_) {
+#         main = paste0(cell,
+#                       "\nProbe x Conc (ug/ml) Table (Results: MFI)")
+#         
+#         mat = mat_list[[i]]
+#         txt = round(mat)
+#         txt[is.na(txt)] = "."
+#         
+#         pheatmap::pheatmap(mat,
+#                            cluster_rows=cluster_rows,
+#                            cluster_cols=FALSE,
+#                            cellwidth=cellwidth,
+#                            cellheight=cellheight,
+#                            angle_col=0,
+#                            breaks=breaks,
+#                            color=colors,
+#                            border_color=border_color,
+#                            display_numbers=txt,
+#                            number_color=number_color,
+#                            main=main,
+#                            legend=legend)
+#         
+#         msg = paste0("Date: ", Sys.Date(), " | ",
+#                      "Page ", i , "/", lm_)
+#         grid.text(msg, x=0.5, y=0.98, gp=gpar(fontsize=10))
+#     }
+# 
+#     return(MAT)
+# }
+# 
+# titration_sample_size = function(dat, 
+#                                  cell="cell", 
+#                                  cluster_rows=FALSE, 
+#                                  ncut=40) {
+#     # graph params
+#     cellheight = 15
+#     cellwidth = 35
+#     legend = FALSE
+#     border_color = "white"
+#     number_color = "black"
+# 
+#     # data
+#     mfi = dat[["mfi"]]
+#     probe_id = dat[["probe_name"]]
+#     probe_conc = dat[["conc (ug/ml)"]]
+#     MAT = tapply(mfi, list(probe_id, probe_conc), length)
+# 
+#     nr = nrow(MAT)
+#     s = floor(nr / ncut) + 1
+#     s_ = rep(1:s, each=ncut)[1:nr]
+#     ls_ = length(s_)
+#     if (ls_ > 1) {
+#         if (sum(s_==s_[ls_]) == 1) s_[ls_] = s_[ls_ - 1]
+#     }
+#     
+#     mat_list = split(as.data.frame(MAT), s_)
+#     lm_ = length(mat_list)
+#     
+#     for (i in 1:lm_) {
+#         main = paste0(cell,
+#                       "\nProbe x Conc (ug/ml) Table (Results: Sample Size)")
+#         
+#         mat = mat_list[[i]]
+#         txt = round(mat)
+#         txt[is.na(txt)] = "."
+# 
+#         pheatmap::pheatmap(mat,
+#                            cluster_rows=cluster_rows,
+#                            cluster_cols=FALSE,
+#                            cellwidth=cellwidth,
+#                            cellheight=cellheight,
+#                            angle_col=0,
+#                            breaks=c(1, 2),
+#                            color=c("aliceblue"),
+#                            border_color=border_color,
+#                            display_numbers=txt,
+#                            number_color=number_color,
+#                            main=main,
+#                            legend=FALSE)
+#         
+#         msg = paste0("Date: ", Sys.Date(), " | ",
+#                      "Page ", i , "/", lm_)
+#         grid.text(msg, x=0.5, y=0.98, gp=gpar(fontsize=10))
+#         
+#         msg = "Values of cells w/ sample size > 1 are averaged."
+#         grid.text(msg, x=0.5, y=0.02, gp=gpar(fontsize=10))
+#     }
+#     
+# }
+# 
+# titration_plot = function(adam, 
+#                           sample_size=FALSE, 
+#                           max_mfi=NULL) {
+#     
+#     res_t = split(adam, adam$"target_spec_name")
+#     
+#     ncells = length(res_t)
+#     nsmpls = sum(sapply(res_t, nrow))
+#     
+#     if (is.null(max_mfi)) {
+#         p_max = max(sapply(res_t, function(x) max(x[["mfi"]], na.rm = TRUE)), 
+#                     na.rm=T)    
+#     }
+#     
+#     if (!sample_size) {
+#         op = par(mar=c(3, 3, 5, 3))
+#         
+#         plot(0, 0, axes=F, xlab="", ylab="", pch="", main="Titration TLGs",
+#              cex.main=1.25)
+#         msg = paste0("Titration TLGs\nNumber of cell lines: ", ncells,
+#                      "\nNumber of total samples: ", nsmpls)
+#         text(0, 0, msg, cex=1.5)
+# 
+#         par(op)
+#         
+#         hold = list()
+#         for (cell in names(res_t)) {
+#             res = titration_hmap(res_t[[cell]], cell, max_mfi=p_max)
+#             colnames(res) = paste0(colnames(res), " (ug/ml)")
+#             df = data.frame("target_spec"=rep(cell, nrow(res)),
+#                             probe_name=rownames(res),
+#                             check.names = F)
+#             df = cbind(df, round(res))
+#             hold[[cell]] = df  
+#         }
+#         hold = do.call(rbind, hold)
+#         rownames(hold) = NULL
+#         
+#     }else{
+#         # sample size
+#         op = par(mar=c(3, 3, 3, 3))
+#         plot(0, 0, axes=F, xlab="", ylab="", pch="")
+#         text(0, 0, "Appendix\nSample Size Matrix", cex=1.5)
+#         par(op)
+#         
+#         for (cell in names(res_t)) {
+#             titration_sample_size(res_t[[cell]], cell)    
+#         }
+#         
+#         hold = NULL
+#     }
+#     
+#     return(hold)
+# }
+# 
+# single_dose_hmap = function(dat,
+#                             max_mfi=NULL,
+#                             cluster_rows=FALSE,
+#                             ncut=38) {
+# 
+#     # graph params
+#     cellheight = 15
+#     cellwidth = 35
+#     legend = FALSE
+#     border_color = "white"
+#     number_color = "black"
+#     
+#     N = 100
+#     breaks = seq(0, max_mfi, length.out = N + 1)
+#     colors = colorRampPalette(rev(RColorBrewer::brewer.pal(n = 7, name = "RdYlBu")))(N)
+#     
+#     # data
+#     target_spec_name = dat[["target_spec_name"]]
+#     probe_name = dat[["probe_name"]]
+#     mfi = dat[["mfi"]]
+#     
+#     MAT = tapply(mfi, list(probe_name, target_spec_name), mean, na.rm=TRUE)
+#     
+#     probe_conc = dat[["conc (ug/ml)"]]             
+#     
+#     # split heatmap matrix
+#     nr = nrow(MAT)
+#     s = floor(nr / ncut) + 1
+#     s_ = rep(1:s, each=ncut)[1:nr]
+#     ls_ = length(s_)
+#     if (ls_ > 1) {
+#         if (sum(s_==s_[ls_]) == 1) s_[ls_] = s_[ls_ - 1]
+#     }
+#     
+#     mat_list = split(as.data.frame(MAT), s_)
+#     lm_ = length(mat_list)
+#     for (i in 1:lm_) {
+#         main = paste0("Probe Conc: ", probe_conc[1], " (ug/ml)",
+#                       "\nProbe x Target Spec (Results: MFI)")
+#         
+#         mat = mat_list[[i]]
+#         txt = round(mat)
+#         txt[is.na(txt)] = "."
+#         
+#         pheatmap::pheatmap(mat,
+#                            cluster_rows=cluster_rows,
+#                            cluster_cols=FALSE,
+#                            cellwidth=cellwidth,
+#                            cellheight=cellheight,
+#                            breaks=breaks,
+#                            color=colors,
+#                            border_color=border_color,
+#                            display_numbers=txt,
+#                            number_color=number_color,
+#                            main=main,
+#                            legend=legend)
+# 
+#         msg = paste0("Date: ", Sys.Date(), " | ",
+#                      "Page ", i , "/", lm_)
+#         grid.text(msg, x=0.5, y=0.98, gp=gpar(fontsize=10))
+#     }
+#     
+#     return(MAT)
+# }
+# 
+# single_dose_sample_size = function(dat,
+#                                    cluster_rows=FALSE, 
+#                                    ncut=38) {
+#     # graph params
+#     cellheight = 15
+#     cellwidth = 35
+#     legend = FALSE
+#     border_color = "white"
+#     number_color = "black"
+#     
+#     # data
+#     target_spec_name = dat[["target_spec_name"]]
+#     probe_name = dat[["probe_name"]]
+#     mfi = dat[["mfi"]]
+#     
+#     MAT = tapply(mfi, list(probe_name, target_spec_name), length)
+#     
+#     probe_conc = dat[["conc (ug/ml)"]]             
+#     
+#     # split heatmap matrix
+#     nr = nrow(MAT)
+#     s = floor(nr / ncut) + 1
+#     s_ = rep(1:s, each=ncut)[1:nr]
+#     ls_ = length(s_)
+#     if (ls_ > 1) {
+#         if (sum(s_==s_[ls_]) == 1) s_[ls_] = s_[ls_ - 1]
+#     }
+#     
+#     mat_list = split(as.data.frame(MAT), s_)
+#     lm_ = length(mat_list)
+#     
+#     for (i in 1:lm_) {
+#         main = paste0("Probe Conc: ", probe_conc[1], " (ug/ml)",
+#                       "\nProbe x Target Spec (Results: Sample Size)")
+#         
+#         mat = mat_list[[i]]
+#         txt = round(mat)
+#         txt[is.na(txt)] = "."
+#         pheatmap::pheatmap(mat,
+#                            cluster_rows=cluster_rows,
+#                            cluster_cols=FALSE,
+#                            cellwidth=cellwidth,
+#                            cellheight=cellheight,
+#                            breaks=c(1, 2),
+#                            color=c("aliceblue"),
+#                            border_color=border_color,
+#                            display_numbers=txt,
+#                            number_color=number_color,
+#                            main=main,
+#                            legend=FALSE)
+#         
+#         msg = paste0("Date: ", Sys.Date(), " | ",
+#                      "Page ", i , "/", lm_)
+#         grid.text(msg, x=0.5, y=0.98, gp=gpar(fontsize=10))
+#         
+#         msg = "Values of cells w/ sample size > 1 are averaged."
+#         grid.text(msg, x=0.5, y=0.02, gp=gpar(fontsize=10))
+#     }
+#     
+# }
+# 
+# single_dose_plot = function(adam, 
+#                             sample_size=FALSE,
+#                             max_mfi=NULL) {
+#     res_s = split(adam, adam$"conc (ug/ml)")
+#     
+#     ncells = length(unique(sapply(res_s, function(x) unique(x[["target_spec_name"]]))))
+#     nsmpls = sum(sapply(res_s, nrow))
+#     
+#     if (is.null(max_mfi)) {
+#         p_max = max(sapply(res_s, function(x) max(x[["mfi"]], na.rm = TRUE)), 
+#                     na.rm=T)    
+#     }
+#     
+#     if (!sample_size) {
+#         op = par(mar=c(3, 3, 5, 3))
+#         plot(0, 0, axes=F, xlab="", ylab="", pch="", main="Single Dose TLGs",
+#              cex.main=1.25)
+#         msg = paste0("Single Dose TLGs\nNumber of cell lines: ", ncells,
+#                      "\nNumber of total samples: ", nsmpls)
+#         text(0, 0, msg, cex=1.5)
+#         par(op)
+#  
+#         hold1 = list()
+#         for (k in names(res_s)) {
+#             res = single_dose_hmap(res_s[[k]], max_mfi=p_max)
+#             df = data.frame("probe_conc (ug/ml)"=rep(k, nrow(res)),
+#                             probe_name=rownames(res),
+#                             check.names = F)
+#             df = cbind(df, round(res))
+#             hold1[[k]] = df
+#         }
+#         hold1 = do.call(rbind, hold1)
+#         rownames(hold1) = NULL
+#         
+#     }else{
+#         # sample size
+#         op = par(mar=c(3, 3, 3, 3))
+#         plot(0, 0, axes=F, xlab="", ylab="", pch="")
+#         text(0, 0, "Appendix\nSample Size Matrix", cex=1.5)
+#         par(op)
+#         
+#         for (k in names(res_s)) {
+#             single_dose_sample_size(res_s[[k]])
+#         }
+#         
+#         hold1 = NULL
+#     }
+# 
+#     return(hold1)
+# }
 
 notes_summary_func = function(notes) {
     notes = as.character(notes)
@@ -515,6 +515,10 @@ adam_plot = function(adam,
     col2 = "gray30"
     col3 = "gray90"
 
+    cna = colnames(adam)
+    cna = cna[grep("^conc", cna)]
+    cna_ = gsub("conc ", "", cna)
+    
     if (is.null(sample_names)) {
         col1 = "gray50"
         
@@ -522,18 +526,19 @@ adam_plot = function(adam,
         probe_name = paste0(length(unique(adam$probe_name))," PROBES")
         target_name = paste0(length(unique(adam$target_spec_name))," TARGETS")
         
-        rng = range(adam$"conc (ug/ml)")
+        rng = range(adam[,cna])
+
         if (rng[1]==rng[2]) {
-            conc_name = paste0("Conc. ", rng[1], " (ug/ml)")
+            conc_name = paste0("Conc. ", rng[1], " ", cna_)
         }else{
-            conc_name = paste0("Conc. ", rng[1], " - ", rng[2], " (ug/ml)")
+            conc_name = paste0("Conc. ", rng[1], " - ", rng[2], " ", cna_)
         }
     }else{
         col1 = "red3"
         
         target = unique(dat[sample_names, "target_spec_name"])
         probe = unique(dat[sample_names, "probe_name"])
-        rng = range(dat[sample_names, "conc (ug/ml)"])
+        rng = range(dat[sample_names, cna])
         
         lt = length(target)
         if (lt==1) {
@@ -550,9 +555,9 @@ adam_plot = function(adam,
         }
         
         if (rng[1]==rng[2]) {
-            conc_name = paste0("Conc. ", rng[1], " (ug/ml)")
+            conc_name = paste0("Conc. ", rng[1], " ", cna_)
         }else{
-            conc_name = paste0("Conc. ", rng[1], " - ", rng[2], " (ug/ml)")
+            conc_name = paste0("Conc. ", rng[1], " - ", rng[2], " ", cna_)
         }
         
         if (nchar(target_name) > 25) {
@@ -646,6 +651,9 @@ dup_adam_plot = function(adam,
 
 
 titration_res_table = function(adam, sample_size=FALSE) {
+    cna = colnames(adam)
+    cna = cna[grep("^conc", cna)]
+    cna_ = gsub("conc ", "", cna)
     
     res_t = split(adam, adam$"target_spec_name")
     
@@ -658,7 +666,7 @@ titration_res_table = function(adam, sample_size=FALSE) {
         
         mfi = dat[["mfi"]]
         probe_id = dat[["probe_name"]]
-        probe_conc = dat[["conc (ug/ml)"]]
+        probe_conc = dat[[cna]]
         
         if (sample_size) {
             res = tapply(mfi, list(probe_id, probe_conc), length)
@@ -666,7 +674,7 @@ titration_res_table = function(adam, sample_size=FALSE) {
             res = tapply(mfi, list(probe_id, probe_conc), mean, na.rm=T)
         }
         
-        colnames(res) = paste0(colnames(res), " (ug/ml)")
+        colnames(res) = paste0(colnames(res), " ", cna_)
         df = data.frame("target_spec"=rep(cell, nrow(res)),
                         probe_name=rownames(res),
                         check.names = F)
@@ -680,9 +688,13 @@ titration_res_table = function(adam, sample_size=FALSE) {
 }
 
 single_dose_res_table = function(adam, sample_size=FALSE) {
-    res_s = split(adam, adam$"conc (ug/ml)")
+    cna = colnames(adam)
+    cna = cna[grep("^conc", cna)]
+    cna_ = gsub("conc ", "", cna)
     
-    names(res_s) = paste0(names(res_s), " (ug/ml)")
+    res_s = split(adam, adam[,cna])
+    
+    names(res_s) = paste0(names(res_s), " ", cna_)
     
     ncells = length(unique(sapply(res_s, function(x) unique(x[["target_spec_name"]]))))
     nsmpls = sum(sapply(res_s, nrow))
@@ -727,7 +739,7 @@ make_res_table = function(adam, table_type) {
 }
 
 
-plot_res_table = function(res, ncut=38) {
+plot_res_table = function(res, analysis_type=NULL, ncut=38) {
     # mnc = max(nchar(res[,1]))
     # rn_ = sprintf(paste0("%-", mnc, "s"), res[,1])
     # rn = paste0(rn_,  " ", res[, 2])
@@ -760,9 +772,19 @@ plot_res_table = function(res, ncut=38) {
     
     mat_list = split(as.data.frame(MAT), s_)
     lm_ = length(mat_list)
+    
+    if (is.null(analysis_type)) {
+        main = "Results: MFI"
+    }else{
+        if (analysis_type=="Probe x Conc") {
+            main = "Probe x Conc. (Results: MFI)"
+        }else{
+            main = "Probe x Target Spec (Results: MFI)"
+        }
+        
+    }
+    
     for (i in 1:lm_) {
-        main = paste0("Probe Conc: (ug/ml)",
-                      "\nProbe x Target Spec (Results: MFI)")
         
         mat = mat_list[[i]]
         txt = round(mat)
