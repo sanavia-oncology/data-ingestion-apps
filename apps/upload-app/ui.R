@@ -4,7 +4,11 @@
 library(shiny)
 library(bslib)
 library(DT)
-library(shinyFiles)
+library(jsonlite)   # reads the status file the background sync writes
+
+# The folder picker is the OS one (osascript), not shinyFiles: the app runs
+# on the scientist's own Mac, so the native panel is both more familiar and
+# able to reach volumes a browser-side widget cannot.
 
 # set app directory
 app_dir = paste0(getwd(), "/")

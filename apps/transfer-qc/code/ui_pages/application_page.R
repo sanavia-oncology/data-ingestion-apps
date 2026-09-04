@@ -70,8 +70,21 @@ application_page = bslib::nav_panel(
         ")
     ),
     
+    # The QC cell buttons in qc_table.R carry onclick="sendButtonID(this.id)".
+    # Without this, that call is a ReferenceError and input$last_cell_clicked
+    # never fires, so clicking a failed cell does nothing and the message box
+    # keeps its placeholder. Restored from checker-app (commit 0c62be04); it
+    # arrived here commented out and was later dropped entirely.
+    tags$script(
+        HTML("
+            function sendButtonID(id) {
+            Shiny.setInputValue('last_cell_clicked', id, {priority: 'event'});
+            }
+        ")
+    ),
+
     title = "Return to home page",
     page_banner("Experiment Data Transfer QC"),
-    
+
     app_card
 )

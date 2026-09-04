@@ -1,1 +1,23 @@
 .DS_Store
+
+# Local secrets and machine-specific config. The real file lives at
+# ~/.env_data_ingestion_apps; scripts/env.example is the committed template.
+.env
+*.env.local
+
+# Runtime output of the background uploader.
+logs/
+
+# Playwright MCP artifacts from driving the apps locally.
+.playwright-mcp/
+
+# Local dev conveniences for running the Shiny apps by hand; the client
+# configures those, so they are not part of the repo.
+apps/*/scripts/dev_*.command
+
+# Dev notes — the client clones this repo, so working docs stay local.
+DEV.md
+
+# app-fc writes this while gating and clears it on save/exit; it is runtime
+# output, not source. (tlgs-app's PDFs under www/docs/tlgs ARE tracked.)
+apps/app-fc/www/docs/tlgs/*.pdf

@@ -20,7 +20,9 @@ app_card = tags$div(
 
                     tags$p(paste0("Today's date: ", Sys.Date()),
                            class="text-secondary"),
+
                     tags$div(id = "sidebar_anchor")),
+
       main_contents
     )
 )
@@ -68,7 +70,7 @@ application_page = bslib::nav_panel(
     ),
 
     title = "Upload data",
-    page_banner("Upload your data to AWS/Benchling"),
+    page_banner("Upload your data to AWS"),
 
     app_card
 )
