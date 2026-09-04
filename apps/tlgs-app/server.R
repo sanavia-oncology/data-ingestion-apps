@@ -3542,7 +3542,6 @@ server = function(input, output, session) {
         adam[,cna] = factor(adam[,cna])
 
         res = make_res_table(adam, input$analysis_type)
-        print(res)
         
         res_table(res)
         
