@@ -12,10 +12,9 @@
 PROJECT_MARKER_DIRS = c("plate_information_sheets", "assay_data",
                         "qc_report", "gating_results")
 
-# What the table shows, in order. path/root ride along for the server.
-# Project Group still rides along in the data - the manifest keys on it, so
-# two groups can hold a project of the same name - but it is not shown.
-PROJECT_TABLE_COLS = c("Project Name", "Status")
+# What the table shows, in order - the shared columns match app-fc's front
+# page so the two read the same. path/root ride along for the server.
+PROJECT_TABLE_COLS = c("Date Created", "Project Group", "Project Name", "Status")
 
 discover_projects = function(roots) {
     empty = data.frame(

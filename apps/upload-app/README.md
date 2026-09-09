@@ -27,7 +27,7 @@ with none registered refuses to start.
 `UPLOAD_SYNC_INTERVAL` (30s), repeats. The sleep sits between passes, so passes
 cannot overlap.
 
-Raw `.fcs` is excluded; gating results go up. A folder holding
+Everything in the folder goes up, raw `.fcs` included. A folder holding
 `<group>/<project>/` lands at `s3://<bucket>/<prefix><group>/<project>/` — the
 folder itself adds no path segment.
 

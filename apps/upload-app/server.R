@@ -3,10 +3,7 @@
 
 server = function(input, output, session) {
     #------------------------------ step 0: on start
-    # Paths, bucket and the background-sync settings, read once per session
-    # from ~/.env_data_ingestion_apps. build_cfg() never fails on a missing
-    # key - cfg_problems() reports what is blank and the sidebar shows it,
-    # which beats dying at startup on a laptop that is half configured.
+    # Bucket and paths, read once per session from ~/.env_data_ingestion_apps.
     cfg = build_cfg()
 
     rv = reactiveValues(
@@ -43,6 +40,9 @@ server = function(input, output, session) {
         if (is.null(df)) return(NULL)
 
         keep = rep(TRUE, nrow(df))
+        if (isTruthy(input$proj_group) && input$proj_group != "All") {
+            keep = keep & df[["Project Group"]] == input$proj_group
+        }
         if (isTruthy(input$status) && input$status != "All") {
             keep = keep & df[["Status"]] == input$status
         }
@@ -65,6 +65,9 @@ server = function(input, output, session) {
         } else {
             output$projects_table = DT::renderDataTable(DT::datatable({
                 data = table_front_page
+                if (input$proj_group != "All") {
+                    data = data[data[["Project Group"]] == input$proj_group,]
+                }
                 if (input$status != "All") {
                     data = data[data[["Status"]] == input$status,]
                 }
@@ -73,11 +76,11 @@ server = function(input, output, session) {
             selection = "multiple",
             options = list(pageLength = 7,
                            dom = "tpf",
-                           # dt-nowrap everywhere but Project Name (col 1, the
+                           # dt-nowrap everywhere but Project Name (col 3, the
                            # rowname column being 0): these names run to 50
                            # characters and would push Status off the edge.
                            columnDefs = list(
-                               list(className = 'dt-nowrap', targets = c(0, 2)))
+                               list(className = 'dt-nowrap', targets = c(0, 1, 2, 4)))
             )))
 
             insert_me1 = tags$div(
@@ -86,17 +89,17 @@ server = function(input, output, session) {
                 tags$p("Select one or more rows, then Add or Remove",
                        class="h6 text-secondary text-center"),
                 fluidRow(
+                    selectInput("proj_group",
+                                "Project Group",
+                                c("All", sort(unique(table_front_page[["Project Group"]])))),
                     selectInput("status",
                                 "Status",
-                                c("All", "Waiting", "Added", "Removed"))
+                                c("All", "Published", "Not Published"))
                 ),
                 DT::dataTableOutput("projects_table")
             )
 
             insert_me2 = tags$div(
-                tags$p("Publish", class="h5 text-primary fw-bold"),
-                tags$p("Add lists a project on the web. Remove withdraws it.",
-                       class="h6 text-secondary"),
                 actionButton("add_selected", "Add",
                              class="btn-secondary w-100"),
                 tags$br(), tags$br(),
@@ -133,6 +136,9 @@ server = function(input, output, session) {
     #------------------------------ step 2: publish flags
     write_flags = function(display) {
         sel = selected_projects()
+
+        # The two cases where nothing visibly happens: no rows picked, and the
+        # write failing. Success needs no toast - the Status column shows it.
         if (is.null(sel) || nrow(sel) == 0) {
             showNotification("Select one or more projects first.",
                              type = "warning", duration = 3)
@@ -145,15 +151,11 @@ server = function(input, output, session) {
         }, error = function(e) {
             showNotification(paste("Could not write the manifest:",
                                    conditionMessage(e)),
-                             type = "error", duration = 6)
+                             type = "error", duration = 8)
             FALSE
         })
         if (!ok) return(invisible(NULL))
 
-        showNotification(sprintf("%s %d project(s)",
-                                 if (display == "yes") "Added" else "Removed",
-                                 nrow(sel)),
-                         type = "message", duration = 4)
         rescan()
     }
 

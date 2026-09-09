@@ -49,9 +49,8 @@ expand_env_refs = function(value, resolved) {
     path.expand(value)
 }
 
-# Everything the app needs, resolved once per session. Defaults here mirror
-# fc_sync.sh's header so a partially-filled env file still starts the app —
-# the UI reports what is missing rather than failing at load.
+# Everything the app needs, resolved once per session. Defaults mirror
+# fc_sync.sh's header.
 build_cfg = function() {
     conf = read_env_file(Sys.getenv("DATA_INGESTION_ENV_FILE", APP_ENV_FILE))
 
@@ -89,14 +88,3 @@ s3_uri_for = function(cfg, root, rel_path = "") {
     if (nzchar(rel_path)) paste0(base, rel_path, "/") else base
 }
 
-# Which required settings are still blank. The sidebar shows these instead of
-# letting a sync fail deep inside the AWS CLI.
-# DATA_DIR is deliberately not checked: it belongs to the gating apps, and
-# this one is perfectly usable pointed at a folder DATA_DIR knows nothing
-# about. What it does need is a bucket and a working CLI.
-cfg_problems = function(cfg) {
-    msgs = character(0)
-    if (!nzchar(cfg$bucket)) msgs = c(msgs, "UPLOAD_S3_BUCKET is not set")
-    if (!nzchar(Sys.which("aws"))) msgs = c(msgs, "the aws CLI is not on PATH")
-    msgs
-}

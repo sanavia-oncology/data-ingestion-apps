@@ -42,8 +42,6 @@ log() { printf '%s  %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >> "$LOG"; }
 # Junk that must never reach the bucket. aws matches each pattern against the
 # whole path, so every name needs a */-prefixed twin to match below the root.
 EXCLUDES=(
-    # Raw FCS stays on the laptop; only the gating results go up.
-    --exclude "*.fcs"             --exclude "*.FCS"
     --exclude "*.DS_Store"
     --exclude "._*"               --exclude "*/._*"
     --exclude "Icon*"             --exclude "*/Icon*"
@@ -93,9 +91,18 @@ while true; do
             # at <prefix><group>/<project>/.
             # Backgrounded and waited on, so a signal reaches us mid-transfer
             # and the child dies with us instead of uploading on alone.
-            aws s3 sync "$root" "s3://$BUCKET/$PREFIX" \
-                --no-progress --only-show-errors "${EXCLUDES[@]}" \
-                --cli-connect-timeout 10 --cli-read-timeout 120 >>"$LOG" 2>&1 &
+            # This sync must only ever add. --delete would mirror a local
+            # deletion up to S3 and destroy the only copy; the IAM policy also
+            # withholds s3:DeleteObject, but do not rely on that alone.
+            args=(s3 sync "$root" "s3://$BUCKET/$PREFIX"
+                  --no-progress --only-show-errors "${EXCLUDES[@]}"
+                  --cli-connect-timeout 10 --cli-read-timeout 120)
+            if printf '%s\n' "${args[@]}" | grep -qx -- "--delete"; then
+                log "REFUSING: --delete present in sync args"
+                continue
+            fi
+
+            aws "${args[@]}" >>"$LOG" 2>&1 &
             CHILD=$!
             if wait "$CHILD"; then log "ok $root"; else log "ERROR sync failed: $root"; fi
             CHILD=""

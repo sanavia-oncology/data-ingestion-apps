@@ -87,20 +87,12 @@ set_display = function(cfg, path, projects, display) {
     df
 }
 
-# The Status column. Three states, and the distinction matters: a project
-# nobody has decided on yet is Waiting, not Removed - reading "Removed" for
-# something that was never submitted is simply wrong.
-#
-#   no row in the manifest -> Waiting
-#   display = yes          -> Added
-#   display = no           -> Removed   (submitted, then withdrawn)
-#
-# The CSV itself still stores display=yes/no, which is the question the web
-# app actually asks: show this or not. Waiting and Removed both mean no.
+# The Status column. The CSV stores display=yes/no, which is the question the
+# web app asks; the table shows the same thing in words.
 status_flags = function(manifest, projects) {
     if (nrow(projects) == 0) return(character(0))
     idx = match(manifest_key(projects[["Project Group"]], projects[["Project Name"]]),
                 manifest_key(manifest$project_group, manifest$project_name))
     flags = manifest$display[idx]
-    ifelse(is.na(flags), "Waiting", ifelse(flags == "yes", "Added", "Removed"))
+    ifelse(!is.na(flags) & flags == "yes", "Published", "Not Published")
 }
