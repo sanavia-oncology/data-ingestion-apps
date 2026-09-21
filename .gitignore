@@ -21,3 +21,7 @@ DEV.md
 # app-fc writes this while gating and clears it on save/exit; it is runtime
 # output, not source. (tlgs-app's PDFs under www/docs/tlgs ARE tracked.)
 apps/app-fc/www/docs/tlgs/*.pdf
+
+# Claude Code project instructions, local only.
+CLAUDE.md
+.claude/
