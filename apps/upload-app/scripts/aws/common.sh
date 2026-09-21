@@ -1,8 +1,4 @@
-# Shared by publish_policy.sh and provision_laptop.sh; source it.
-#
-# The sibling repo's order-upload has the same three scripts pointed at
-# genscript-orders/. Same account, same shape, different prefix and policy:
-# an order-upload key is denied on flow-cytometry/ and vice versa.
+# Shared by publish_policy.sh and provision_laptop.sh.
 EXPECTED_ACCOUNT="503972965207"
 PROFILE="${AWS_PROFILE:-antibody-explorer}"
 REGION="us-east-1"
@@ -27,7 +23,6 @@ require_sso() {
     [[ "$got" == "$EXPECTED_ACCOUNT" ]] || { echo "wrong AWS account $got, expected $EXPECTED_ACCOUNT" >&2; exit 1; }
 }
 
-# add-only under our prefix: Put + List there, no Get/Delete, nothing outside it; bucket versioning keeps overwritten copies
 policy_json() {
     cat <<JSON
 {

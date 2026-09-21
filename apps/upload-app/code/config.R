@@ -49,11 +49,7 @@ expand_env_refs = function(value, resolved) {
     path.expand(value)
 }
 
-# Everything the app needs, resolved once per session. Defaults mirror
-# fc_sync.sh's header.
-#
-# The destination comes from the env file, NOT from the sync script's hardcoded
-# prod constants: local development points the app at the test bucket.
+# Resolved once per session.
 build_cfg = function() {
     conf = read_env_file(Sys.getenv("DATA_INGESTION_ENV_FILE", APP_ENV_FILE))
 

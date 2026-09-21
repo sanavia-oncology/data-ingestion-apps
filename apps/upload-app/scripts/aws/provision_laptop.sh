@@ -1,20 +1,12 @@
 #!/usr/bin/env bash
-# Mint a laptop's IAM user + key as one aws-creds file. Usage: provision_laptop.sh [--dev] [--force] [--host NAME [--owner "Full Name"] [--user macos-account]]
+# Mint a laptop's IAM user + key as one aws-creds file.
 #
-# AWS has no service-account file. For an unattended launchd job the only
-# credential that works is an IAM user access key, so keep its blast radius
-# small: one user per laptop, one add-only policy, revoke per laptop.
+#   ./provision_laptop.sh                                            this Mac
+#   ./provision_laptop.sh --host SAN-LT-NN --owner "Name" --user id  another Mac
+#   --dev      dev bucket    --force    overwrite an existing creds file
 #
-#   ./provision_laptop.sh                              this Mac
-#   ./provision_laptop.sh --host SAN-LT-NN \           another Mac; the file
-#       --owner "Full Name" --user macos.account       lands in ~/.upload-app/minted/
-#
-# --host takes the target Mac's short hostname (`hostname -s` there, or the
-# host shown in its shell prompt). Guessing it mints an IAM user for a machine
-# that does not exist, which then has to be revoked by hand.
-#
-# The owner lives in IAM tags, not the user name: the name stays hostname-based
-# so it still matches the machine if it changes hands.
+# --host is the target Mac's short hostname. The file lands in
+# ~/.upload-app/minted/<host>/aws-creds; send it privately.
 set -euo pipefail
 . "$(dirname "$0")/common.sh"
 
@@ -32,7 +24,7 @@ done
 resolve_env "$ENV"
 require_sso
 
-LOCAL_HOST="$(hostname -s 2>/dev/null || echo unknown)"   # hostname, not hardware UUID: Apple Silicon regenerates that on reinstall
+LOCAL_HOST="$(hostname -s 2>/dev/null || echo unknown)"
 MINTED_BY="$(whoami)"
 if [[ -n "$HOST" ]]; then
     LAPTOP_ID="$HOST"
@@ -52,7 +44,6 @@ for i in "${!TAGS[@]}"; do TAGS[$i]="${TAGS[$i]%%,Value=*},Value=$(sanitize_tag 
 
 if [[ -n "$HOST" ]]; then OUT="$HOME/.upload-app/minted/$host/aws-creds"; else OUT="$CREDS_FILE"; fi
 
-# refuse before minting, so a refusal never orphans a key
 if [[ -f "$OUT" && $FORCE != 1 ]]; then
     echo "refusing to overwrite $OUT; --force to mint again (revoke the old IAM user by hand)" >&2; exit 1
 fi
@@ -82,8 +73,6 @@ KEY_ID=$(printf '%s' "$KEY_JSON" | /usr/bin/python3 -c 'import json,sys;print(js
 SECRET=$(printf '%s' "$KEY_JSON" | /usr/bin/python3 -c 'import json,sys;print(json.load(sys.stdin)["AccessKey"]["SecretAccessKey"])')
 trap - ERR
 
-# the key and its bucket are a matched pair, so the file names both; fc_sync
-# sources this after the env file, so these two win over anything set there
 mkdir -p "$(dirname "$OUT")"; umask 077
 cat > "$OUT" <<CREDS
 # IAM user ${IAM_USER} (account ${EXPECTED_ACCOUNT}), issued $(date -u +%Y-%m-%d) for ${LAPTOP_ID}

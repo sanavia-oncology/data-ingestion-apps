@@ -1,13 +1,10 @@
 #!/bin/bash
-# Wipe every object, version and delete marker under flow-cytometry/ in the
-# prod bucket - a clean slate to watch a laptop's sync repopulate it. Lifts the
-# bucket's delete-deny for the duration and puts it back after, then proves
-# both. Touches nothing outside the prefix.
+# Delete every object, version and delete marker under flow-cytometry/ in the
+# prod bucket. Lifts the bucket's delete-deny for the duration and restores it.
+# Not recoverable.
 #
-#     bash wipe_flow_cytometry_prefix.sh           # asks before deleting
-#
-# The data is not recoverable afterwards. Only run it when a copy exists
-# elsewhere.
+#     bash wipe_flow_cytometry_prefix.sh           asks first
+#     bash wipe_flow_cytometry_prefix.sh --yes     no prompt
 set -euo pipefail
 export AWS_PROFILE="${AWS_PROFILE:-antibody-explorer}"
 B=sanavia-experiment-raw-data
@@ -28,7 +25,7 @@ aws s3api get-bucket-policy --bucket "$B" --query Policy --output text \
   > /tmp/policy-nodeny.json
 aws s3api put-bucket-policy --bucket "$B" --policy file:///tmp/policy-nodeny.json
 restore() { echo "--- restoring delete-deny"; aws s3api put-bucket-policy --bucket "$B" --policy "file://$POLICY"; }
-trap restore EXIT    # the deny goes back even if a delete batch fails
+trap restore EXIT
 
 echo "--- deleting versions and markers in batches of 1000"
 aws s3api list-object-versions --bucket "$B" --prefix "$PREFIX" --output json \
