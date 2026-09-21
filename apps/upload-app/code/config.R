@@ -51,6 +51,9 @@ expand_env_refs = function(value, resolved) {
 
 # Everything the app needs, resolved once per session. Defaults mirror
 # fc_sync.sh's header.
+#
+# The destination comes from the env file, NOT from the sync script's hardcoded
+# prod constants: local development points the app at the test bucket.
 build_cfg = function() {
     conf = read_env_file(Sys.getenv("DATA_INGESTION_ENV_FILE", APP_ENV_FILE))
 
@@ -69,6 +72,7 @@ build_cfg = function() {
 
 
     list(
+        upload_dir   = getv("UPLOAD_DIR", getv("DATA_DIR")),
         folders_file = file.path(state_dir, "folders.txt"),
         manifest_name = manifest_name,
         bucket       = getv("UPLOAD_S3_BUCKET"),

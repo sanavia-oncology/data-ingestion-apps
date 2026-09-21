@@ -1,119 +1,306 @@
-#!/usr/bin/env bash
-# Flow-cytometry S3 sync: sync each registered folder, sleep, repeat.
-# Started by apps/upload-app/scripts/fc_sync_start.command.
+#!/bin/bash
+# Flow-cytometry S3 uploader. Runs in the background, comes back at every login.
 #
-# The publish manifest sits inside the synced folder, so it goes up with
-# everything else - there is no separate upload step for it.
+#     bash fc_sync.sh check     show what would be uploaded, install nothing
+#     bash fc_sync.sh start     install and start; run once, from anywhere
+#     bash fc_sync.sh stop      stop and uninstall
+#     bash fc_sync.sh status    is it running, and what has it done lately
 #
-# The sleep sits between passes, so passes never overlap.
+# start copies this file to ~/.upload-app/fc_sync.sh and registers a launchd
+# agent that runs the copy, so the original can be deleted afterwards. It
+# checks everything below first and refuses, with a reason, rather than
+# installing something broken.
 #
-# Reads ~/.env_data_ingestion_apps:
+# The key: save the aws-creds file next to this script and run start. It is
+# moved to ~/.upload-app/aws-creds (owner-only), so nothing secret stays in
+# Downloads. That path is fixed - the env file cannot point elsewhere. The dev
+# template names ~/.checkr/aws-creds-dev, and honouring it once sent the
+# adopted key to one place and the lookup to another. A new key handed out later goes in the same way and replaces the
+# old one. aws-creds.txt is accepted too, since macOS likes to add .txt.
 #
-#   UPLOAD_S3_BUCKET       destination bucket. Must match the creds file below:
-#                          each laptop has a separate IAM user per environment
-#                          and each can only see its own bucket. Crossing them
-#                          gives "AccessDenied on ListBucket".
-#   UPLOAD_S3_PREFIX       key prefix, e.g. "flow-cytometry/". The synced folder
-#                          adds no segment of its own, so <group>/<project>/
-#                          inside it lands at <prefix><group>/<project>/.
-#   UPLOAD_AWS_CREDS_FILE  sh-style KEY=value file, e.g. ~/.checkr/aws-creds.
-#                          Skipped if AWS_PROFILE is set; otherwise falls back
-#                          to the default AWS credential chain.
-#   UPLOAD_SYNC_INTERVAL   seconds to sleep between passes (default 30).
-#   UPLOAD_MANIFEST_NAME   publish-manifest filename (default
-#                          upload-manifest.csv), written at the top of the
-#                          synced folder so this sync carries it.
-#   AWS_DEFAULT_REGION     default us-east-1.
+# Everything it needs is in ~/.env_data_ingestion_apps, the file the Shiny apps
+# already read:
 #
-# Folders to upload live in ~/.upload-app/folders.txt, one absolute path per
-# line, written by fc_sync_start.command.
+#   DATA_DIR                the flow-cytometry folder, the same line the other
+#                           three apps read. It is the folder ABOVE the
+#                           projects: <group>/<project>/ inside it lands at
+#                           <prefix><group>/<project>/ - the folder itself adds
+#                           no path segment. A DATA_DIR that is itself one
+#                           project (assay_data/ directly inside) is refused,
+#                           since that would flatten it into the bucket root
+#                           and nothing can be deleted from there afterwards.
+#   UPLOAD_DIR              optional: upload this folder instead of DATA_DIR.
+#   UPLOAD_SYNC_INTERVAL    seconds between passes. Default 30.
+#   AWS_DEFAULT_REGION      default us-east-1.
+#
+# The destination is fixed: s3://sanavia-experiment-raw-data/flow-cytometry/.
+# Only the key file may name another bucket, because a key and its bucket are
+# a matched pair (a -dev key is refused by prod and vice versa).
+# UPLOAD_S3_BUCKET / UPLOAD_S3_PREFIX in the env file are for the Shiny app;
+# this script ignores them.
+#
+# Never --delete: a local wipe must not reach the bucket. The IAM policy and
+# the bucket policy both refuse deletes, but do not rely on that alone.
 
-set -uo pipefail
-export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+set -u
+export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
 
+LABEL="com.sanavia.upload-app"
 ENV_FILE="${DATA_INGESTION_ENV_FILE:-$HOME/.env_data_ingestion_apps}"
 STATE="${UPLOAD_STATE_DIR:-$HOME/.upload-app}"
-LOGS="${UPLOAD_LOG_DIR:-$HOME/Library/Logs/upload-app}"
-LOG="$LOGS/fc_sync.log"
+LOG_DIR="${UPLOAD_LOG_DIR:-$HOME/Library/Logs/upload-app}"
+LOG="$LOG_DIR/fc_sync.log"
+COPY="$STATE/fc_sync.sh"
+PIDFILE="$STATE/fc_sync.pid"
+PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
+BUCKET_FIXED="sanavia-experiment-raw-data"
+PREFIX_FIXED="flow-cytometry/"
 
-mkdir -p "$STATE" "$LOGS"
+die() { echo "ERROR: $*" >&2; exit 1; }
 log() { printf '%s  %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >> "$LOG"; }
 
-# Junk that must never reach the bucket. aws matches each pattern against the
-# whole path, so every name needs a */-prefixed twin to match below the root.
-EXCLUDES=(
-    --exclude "*.DS_Store"
-    --exclude "._*"               --exclude "*/._*"
-    --exclude "Icon*"             --exclude "*/Icon*"
-    --exclude "Thumbs.db"         --exclude "*/Thumbs.db"
-    --exclude ".Rhistory"         --exclude "*/.Rhistory"
-    --exclude ".checkr-sync.json" --exclude "*/.checkr-sync.json"
-    --exclude ".git/*"            --exclude "*/.git/*"
-)
-
-CHILD=""
-trap 'kill -KILL "$CHILD" 2>/dev/null; rm -f "$STATE/fc_sync.pid"; log "fc_sync stopped"; exit 0' INT TERM
-echo $$ > "$STATE/fc_sync.pid"
-
-log "--- fc_sync start (pid $$)"
-
-while true; do
-    # Re-read every pass, so editing the env file or the folder list takes
-    # effect without a restart.
-    if [[ -f "$ENV_FILE" ]]; then
-        set -a; . "$ENV_FILE"; set +a
-    else
-        log "ERROR no env file at $ENV_FILE"; sleep 60; continue
-    fi
-
-    BUCKET="${UPLOAD_S3_BUCKET:-}"
-    PREFIX="${UPLOAD_S3_PREFIX:-}"
+# Read the env file, then the key file. Called every pass, so an edit to either
+# applies without a restart. Sets ROOT CREDS INTERVAL BUCKET PREFIX.
+load_config() {
+    [[ -f "$ENV_FILE" ]] && { set -a; . "$ENV_FILE"; set +a; }
+    ROOT="${UPLOAD_DIR:-${DATA_DIR:-}}";  ROOT="${ROOT/#\~/$HOME}"; ROOT="${ROOT%/}"
+    CREDS="$STATE/aws-creds"
     INTERVAL="${UPLOAD_SYNC_INTERVAL:-30}"
     case "$INTERVAL" in ''|*[!0-9]*) INTERVAL=30 ;; esac
     export AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-us-east-1}"
-
-    # The creds file must match the bucket: the -dev key only works on -dev.
-    CREDS="${UPLOAD_AWS_CREDS_FILE:-}"; CREDS="${CREDS/#\~/$HOME}"
-    if [[ -z "${AWS_PROFILE:-}" && -n "$CREDS" && -f "$CREDS" ]]; then
+    # the daemon must use the key file, never an SSO profile it cannot refresh
+    unset AWS_PROFILE AWS_SESSION_TOKEN UPLOAD_S3_BUCKET UPLOAD_S3_PREFIX UPLOAD_AWS_CREDS_FILE
+    BUCKET="$BUCKET_FIXED"; PREFIX="$PREFIX_FIXED"
+    if [[ -f "$CREDS" ]]; then
         set -a; . "$CREDS"; set +a
-        unset AWS_PROFILE
+        [[ -n "${UPLOAD_S3_BUCKET:-}" ]] && BUCKET="$UPLOAD_S3_BUCKET"
+        [[ -n "${UPLOAD_S3_PREFIX:-}" ]] && PREFIX="$UPLOAD_S3_PREFIX"
     fi
+}
 
-    if [[ -z "$BUCKET" ]]; then
-        log "ERROR UPLOAD_S3_BUCKET is not set"
-    else
-        while IFS= read -r root || [[ -n "$root" ]]; do
-            [[ -z "$root" || "$root" == \#* ]] && continue
-            root="${root/#\~/$HOME}"
-            [[ -d "$root" ]] || { log "ERROR missing folder: $root"; continue; }
+# Everything that can be wrong, checked up front with a plain message. Used by
+# start, so a broken setup never gets installed.
+# A broken aws passes `command -v` but cannot run: an Intel-only binary on an
+# Apple Silicon Mac with no Rosetta says "cannot execute binary file" and every
+# pass fails. So run it, not just find it.
+check_aws() {
+    command -v aws >/dev/null 2>&1 || die "aws not found - run: brew install awscli"
+    local out; out=$(aws --version 2>&1) && return 0
+    die "aws is installed at $(command -v aws) but cannot run: ${out##*: }
+       fix, either:  softwareupdate --install-rosetta --agree-to-license
+                or:  sudo rm $(command -v aws) $(dirname "$(command -v aws)")/aws_completer; brew install awscli"
+}
 
-            # The root adds no path segment: <group>/<project>/ under it lands
-            # at <prefix><group>/<project>/.
-            # Backgrounded and waited on, so a signal reaches us mid-transfer
-            # and the child dies with us instead of uploading on alone.
-            # This sync must only ever add. --delete would mirror a local
-            # deletion up to S3 and destroy the only copy; the IAM policy also
-            # withholds s3:DeleteObject, but do not rely on that alone.
-            args=(s3 sync "$root" "s3://$BUCKET/$PREFIX"
+preflight() {
+    check_aws
+    [[ -f "$ENV_FILE" ]]           || die "no $ENV_FILE - see the header of this script for what goes in it"
+    load_config
+    [[ -n "$ROOT" ]]  || die "DATA_DIR is not set in $ENV_FILE"
+    [[ -d "$ROOT" ]]  || die "DATA_DIR is not a folder: $ROOT"
+    [[ -f "$CREDS" ]] || die "no key file at $CREDS - save aws-creds next to this script and run start again"
+    [[ -n "${AWS_ACCESS_KEY_ID:-}" && -n "${AWS_SECRET_ACCESS_KEY:-}" ]] || die "$CREDS has no AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY"
+    check_layout
+    case "$ROOT" in
+        "$HOME/Documents"*|"$HOME/Desktop"*|"$HOME/Downloads"*|"$HOME/Library/CloudStorage"*|"$HOME/Library/Mobile Documents"*|/Volumes/*)
+            echo "WARNING: $ROOT is in a folder macOS hides from background programs."
+            echo "         The sync will run but see NO files until /bin/bash has Full Disk Access:"
+            echo "         System Settings > Privacy & Security > Full Disk Access > + > Cmd-Shift-G > /bin/bash > Open"
+            echo "         (status will say so if it is still blocked)"; echo ;;
+    esac
+}
+
+# The same rule the upload app uses to find projects: a folder holding one of
+# these is a project, and it must sit at least one level below the root.
+MARKERS="plate_information_sheets|assay_data|qc_report|gating_results"
+
+check_layout() {
+    for m in plate_information_sheets assay_data qc_report gating_results; do
+        [[ -d "$ROOT/$m" ]] && die "DATA_DIR is a single project ($ROOT holds $m/). It must be the folder ABOVE the projects - one level up - or the upload lands flat in the bucket root, where nothing can be deleted."
+    done
+    # every <path>/<marker> under the root, reduced to its project folder
+    PROJECTS=$(find "$ROOT" -mindepth 2 -maxdepth 4 -type d 2>/dev/null \
+        | grep -E "/($MARKERS)$" | sed -E "s#/($MARKERS)\$##; s#^$ROOT/##" | sort -u)
+    [[ -n "$PROJECTS" ]] || die "no projects found under $ROOT (nothing holds $MARKERS one or more levels down)"
+}
+
+print_plan() {
+    local n; n=$(echo "$PROJECTS" | grep -c .)
+    echo "  folder:  $ROOT"
+    echo "      to:  s3://$BUCKET/$PREFIX"
+    echo "     key:  $CREDS  (${AWS_ACCESS_KEY_ID:-?})"
+    echo "projects:  $n found; they land at"
+    echo "$PROJECTS" | head -6 | sed "s#^#           s3://$BUCKET/$PREFIX#; s#\$#/#"
+    (( n > 6 )) && echo "           ... and $((n-6)) more"
+}
+
+do_check() { preflight; print_plan; echo; echo "nothing installed. to install:  bash $0 start"; }
+
+# The loop launchd runs. Never exits on a bad config: it logs the problem and
+# tries again, so fixing the env file is enough.
+run_loop() {
+    mkdir -p "$STATE" "$LOG_DIR"
+    # Junk that must never reach the bucket. aws matches each pattern against
+    # the whole path, so every name needs a */-prefixed twin to match below
+    # the root.
+    EXCLUDES=(
+        --exclude "*.DS_Store"
+        --exclude "._*"               --exclude "*/._*"
+        --exclude "Icon*"             --exclude "*/Icon*"
+        --exclude "Thumbs.db"         --exclude "*/Thumbs.db"
+        --exclude ".Rhistory"         --exclude "*/.Rhistory"
+        --exclude ".checkr-sync.json" --exclude "*/.checkr-sync.json"
+        --exclude ".git/*"            --exclude "*/.git/*"
+    )
+    CHILD=""
+    trap 'kill "$CHILD" 2>/dev/null; rm -f "$PIDFILE"; log "stopped"; exit 0' INT TERM
+    echo $$ > "$PIDFILE"
+    log "--- start (pid $$)"
+
+    while true; do
+        load_config
+        if ! aws --version >/dev/null 2>&1; then
+            log "ERROR aws cannot run ($(command -v aws || echo not installed)) - see: bash $COPY check"
+        elif [[ ! -f "$ENV_FILE" ]]; then
+            log "ERROR no env file at $ENV_FILE"
+        elif [[ -z "$ROOT" ]]; then
+            log "ERROR DATA_DIR is not set in $ENV_FILE"
+        elif [[ ! -d "$ROOT" ]]; then
+            log "ERROR missing folder: $ROOT"
+        elif [[ ! -f "$CREDS" ]]; then
+            log "ERROR no key file at $CREDS"
+        elif ! ls "$ROOT" >/dev/null 2>"$STATE/.lserr" && grep -q "not permitted" "$STATE/.lserr"; then
+            # macOS blocks background processes from Documents, Desktop,
+            # Downloads and cloud drives - silently. aws would walk an empty
+            # tree and report success, so refuse here with the fix instead.
+            log "ERROR macOS blocks background access to $ROOT. Fix: System Settings > Privacy & Security > Full Disk Access > + > press Cmd-Shift-G, type /bin/bash, Open. Then: bash $COPY stop; bash $COPY start"
+        elif [[ -z "$(find "$ROOT" -type f 2>/dev/null | head -1)" ]]; then
+            log "ERROR no readable files under $ROOT"
+        else
+            nfiles=$(find "$ROOT" -type f 2>/dev/null | wc -l | tr -d ' ')
+            args=(s3 sync "$ROOT" "s3://$BUCKET/$PREFIX"
                   --no-progress --only-show-errors "${EXCLUDES[@]}"
                   --cli-connect-timeout 10 --cli-read-timeout 120)
             if printf '%s\n' "${args[@]}" | grep -qx -- "--delete"; then
                 log "REFUSING: --delete present in sync args"
-                continue
+            else
+                aws "${args[@]}" >>"$LOG" 2>&1 &   # backgrounded so a signal reaches us mid-transfer
+                CHILD=$!
+                if wait "$CHILD"; then log "ok $nfiles local files checked, $ROOT -> s3://$BUCKET/$PREFIX"; else log "ERROR sync failed: $ROOT"; fi
+                CHILD=""
             fi
+        fi
+        # Trim rather than rotate, so the log never grows unbounded.
+        if [[ $(stat -f%z "$LOG" 2>/dev/null || echo 0) -gt 1048576 ]]; then
+            tail -n 500 "$LOG" > "$LOG.tmp" && mv "$LOG.tmp" "$LOG"
+        fi
+        sleep "$INTERVAL" &   # backgrounded so a signal lands immediately
+        wait $! || break
+    done
+}
 
-            aws "${args[@]}" >>"$LOG" 2>&1 &
-            CHILD=$!
-            if wait "$CHILD"; then log "ok $root"; else log "ERROR sync failed: $root"; fi
-            CHILD=""
-        done < "$STATE/folders.txt" 2>/dev/null
+# A key dropped next to the script moves to $CREDS, replacing whatever is
+# there: a new key means the old one is revoked, so there is nothing to keep.
+adopt_key() {
+    load_config
+    here="$(cd "$(dirname "$0")" && pwd)"
+    for f in "$here/aws-creds" "$here/aws-creds.txt"; do
+        [[ -f "$f" && "$f" != "$CREDS" ]] || continue
+        if [[ -f "$CREDS" ]]; then echo "replacing key at $CREDS"; else echo "installing key to $CREDS"; fi
+        mkdir -p "$(dirname "$CREDS")"
+        mv -f "$f" "$CREDS" && chmod 600 "$CREDS"
+        break
+    done
+}
+
+do_start() {
+    mkdir -p "$STATE" "$LOG_DIR" "$HOME/Library/LaunchAgents"
+    adopt_key
+    preflight
+    self="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
+    [[ "$self" == "$COPY" ]] || cp "$self" "$COPY"
+    chmod 755 "$COPY"
+
+    # KeepAlive, not StartInterval: the loop paces itself. /bin/bash runs the
+    # copy, so launchd never execs a downloaded file.
+    cat > "$PLIST" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key><string>$LABEL</string>
+    <key>ProgramArguments</key>
+    <array><string>/bin/bash</string><string>$COPY</string><string>run</string></array>
+    <key>RunAtLoad</key><true/>
+    <key>KeepAlive</key><true/>
+    <key>ThrottleInterval</key><integer>10</integer>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>HOME</key><string>$HOME</string>
+        <key>DATA_INGESTION_ENV_FILE</key><string>$ENV_FILE</string>
+        <key>UPLOAD_STATE_DIR</key><string>$STATE</string>
+        <key>UPLOAD_LOG_DIR</key><string>$LOG_DIR</string>
+    </dict>
+    <key>StandardOutPath</key><string>$LOG_DIR/launchd.out.log</string>
+    <key>StandardErrorPath</key><string>$LOG_DIR/launchd.err.log</string>
+    <key>ProcessType</key><string>Background</string>
+    <key>LowPriorityIO</key><true/>
+</dict>
+</plist>
+PLIST
+    plutil -lint "$PLIST" >/dev/null || { rm -f "$PLIST"; die "bad plist at $PLIST"; }
+
+    launchctl bootout "gui/$UID/$LABEL" 2>/dev/null   # or a changed plist is ignored
+    for _ in $(seq 40); do launchctl print "gui/$UID/$LABEL" >/dev/null 2>&1 || break; sleep 0.25; done
+    launchctl bootstrap "gui/$UID" "$PLIST" || die "launchctl bootstrap failed"
+    launchctl enable "gui/$UID/$LABEL" 2>/dev/null
+    launchctl kickstart -k "gui/$UID/$LABEL" 2>/dev/null   # bootstrap alone waits for the next login
+
+    echo "started - runs in the background and at every login"
+    print_plan
+    echo "     log:  $LOG"
+    echo
+    echo "check:   bash $COPY status"
+    echo "stop:    bash $COPY stop"
+}
+
+do_stop() {
+    # read the pid before bootout: launchd's TERM runs the trap that deletes it
+    pid=$(cat "$PIDFILE" 2>/dev/null)
+    running=0
+    [[ -n "$pid" ]] && ps -p "$pid" -o command= 2>/dev/null | grep -q fc_sync && running=1
+    launchctl bootout "gui/$UID/$LABEL" 2>/dev/null   # with KeepAlive, killing the pid alone restarts it
+    rm -f "$PLIST"
+    if (( running )); then
+        for _ in $(seq 20); do kill -0 "$pid" 2>/dev/null || break; sleep 0.25; done
+        kill -0 "$pid" 2>/dev/null && { kill -TERM "$pid" 2>/dev/null; sleep 1; }
+        kill -0 "$pid" 2>/dev/null && kill -KILL -- "-$pid" 2>/dev/null   # SIGKILL skips the trap; take the group or aws lives on
+        echo "stopped (pid $pid)"
+    else
+        echo "was not running"
     fi
+    rm -f "$PIDFILE"
+}
 
-    # Trim rather than rotate, so the log never grows unbounded.
-    if [[ $(stat -f%z "$LOG" 2>/dev/null || echo 0) -gt 1048576 ]]; then
-        tail -n 500 "$LOG" > "$LOG.tmp" && mv "$LOG.tmp" "$LOG"
+do_status() {
+    if launchctl print "gui/$UID/$LABEL" >/dev/null 2>&1; then
+        pid=$(launchctl print "gui/$UID/$LABEL" 2>/dev/null | awk '/^\tpid = /{print $3}')
+        if [[ -n "$pid" ]]; then echo "installed: yes   running: yes (pid $pid)"; else echo "installed: yes   running: no"; fi
+    else
+        echo "installed: no"
     fi
+    load_config
+    if [[ -f "$CREDS" ]]; then echo "key: $CREDS  (${AWS_ACCESS_KEY_ID:-no AWS_ACCESS_KEY_ID inside})"; else echo "key: MISSING at $CREDS"; fi
+    [[ -n "$ROOT" ]] && echo "folder: $ROOT$( [[ -d "$ROOT" ]] || echo '  (MISSING)')" || echo "folder: DATA_DIR not set in $ENV_FILE"
+    echo "log: $LOG"
+    [[ -f "$LOG" ]] && { echo "--- last 8 lines:"; tail -n 8 "$LOG"; } || echo "(no log yet - never ran)"
+}
 
-    sleep "$INTERVAL" &     # backgrounded so a signal lands immediately
-    wait $! || break
-done
+case "${1:-}" in
+    run)    run_loop ;;
+    check)  do_check ;;
+    start)  do_start ;;
+    stop)   do_stop ;;
+    status) do_status ;;
+    *)      echo "usage: bash $0 check | start | stop | status" >&2; exit 2 ;;
+esac

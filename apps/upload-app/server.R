@@ -58,8 +58,8 @@ server = function(input, output, session) {
         table_front_page = projects_view()
 
         if (is.null(table_front_page)) {
-            insert_me1 = tags$p("No folders chosen yet. Run
-                                 apps/upload-app/scripts/fc_sync_start.command",
+            insert_me1 = tags$p("No folder set. Add DATA_DIR to
+                                 ~/.env_data_ingestion_apps",
                                 class="h6 text-secondary")
             insert_me2 = NULL
         } else {
