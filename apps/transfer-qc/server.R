@@ -642,16 +642,19 @@ server = function(input, output, session) {
     
     
     # step 7: annotation page
-    observe({
-        if (isTruthy(input$add_notes)) {
-            removeUI(selector = "#main_contents1")
+    show_annotation_page = function() {
+        removeUI(selector = "#main_contents1")
+        cur = function(id, default) if (is.null(input[[id]])) default else input[[id]]
+        pinfo_sheets = err_react_vals$data_list[["pinfo_sheets"]]
+        if (is.null(input_files$probe_table)) {
+            input_files$probe_table = probe_table(pinfo_sheets)
         }
 
         insert_me1 = tags$div(
             tags$p("Select Experiment Type",
                    class="h5 text-primary fw-bold"),
             tags$div(
-                tags$p("Specify the experiment type and dose type",
+                tags$p("Specify the experiment type, dose type and Sana project",
                        class="text-secondary"),
             ),
 
@@ -664,7 +667,8 @@ server = function(input, output, session) {
                         list("None" = "none",
                              "Binding Experiment" = "binding_expr",
                              "Internalization Experiment" = "intern_expr",
-                             "Other" = "other")
+                             "Other" = "other"),
+                        selected = cur("experiment_type", "none")
                     ),
                     selectInput(
                         "dose_type",
@@ -673,10 +677,33 @@ server = function(input, output, session) {
                              "Single Dose" = "single_dose",
                              "Multi-Dose Titration" = "titration",
                              "Multi-Dose Non-titration"= "multi_dose",
-                             "Other"="other")
+                             "Other"="other"),
+                        selected = cur("dose_type", "none")
                     )
                 ),
-                
+                bslib::layout_column_wrap(
+                    selectizeInput(
+                        "sana_project",
+                        "Sana project:",
+                        c(SANA_PROJECTS, "Multiple" = "multiple", "Other" = "other"),
+                        selected = cur("sana_project", character(0)),
+                        options = c(list(placeholder = "Select project"),
+                                    if (!isTruthy(input$sana_project))
+                                        list(onInitialize = I('function() { this.setValue(""); }')))
+                    ),
+                    conditionalPanel(
+                        "input.sana_project == 'other'",
+                        textInput("sana_project_other", "Project name:",
+                                  value = cur("sana_project_other", ""))
+                    ),
+                    conditionalPanel(
+                        "input.sana_project == 'multiple'",
+                        tags$label(class = "control-label", HTML("&nbsp;")),
+                        actionButton("assign_sana", "Edit assignments",
+                                     class = "btn-secondary", width = "100%")
+                    )
+                ),
+
                 tags$p("Type in additional notes",
                        class="h5 text-primary fw-bold"),
                 tags$div(
@@ -684,9 +711,10 @@ server = function(input, output, session) {
                            help to understand the context of this experiment.",
                            class="text-secondary"),
                     tags$div(
-                        textAreaInput( 
-                            "notes", 
-                            "Text input", 
+                        textAreaInput(
+                            "notes",
+                            "Text input",
+                            value = cur("notes", ""),
                             placeholder = "The quick brown fox jumped over the lazy dog...",
                             width="480px",
                         )
@@ -698,52 +726,160 @@ server = function(input, output, session) {
             actionButton("qc_report",
                          "Proceed to Generate Semantic QC Report",
                          class="btn-warning",
-                         disabled = TRUE)
+                         disabled = !proceed_ok())
         )
-        
+
         insertUI(
             selector = "#main_contents",
             where = "afterEnd",
-            
+
             ui = tags$div(
                 id = "main_contents1",
-                
+
                 tags$div(
                     class="row",
-                    
+
                     tags$div(
                         class="col",
                         id = "main_contents_col1",
-                        insert_me1    
+                        insert_me1
                     ),
-                    
+
                     tags$div(
                         class="col",
                         id = "main_contents_col2",
                         tags$div(
                             id = "main_contents_col2_topmark_div",
                         ),
-                        # do nothing
                     )
                 )
             )
         )
-        
-    }) |> bindEvent(input$add_notes)
-    
-    
-    # step 8: enable "Proceed to Generate QC Report"
+    }
+
+    observe({ show_annotation_page() }) |> bindEvent(input$add_notes)
+
+
+    # step 7b: multiple -> assign each antibody
+    show_assign_page = function() {
+        removeUI(selector = "#main_contents1")
+
+        output$sana_probe_table = DT::renderDataTable(DT::datatable(
+            isolate(input_files$probe_table),
+            selection = "multiple",
+            options = list(pageLength = 10,
+                           dom = "tpf",
+                           scrollX = TRUE,
+                           columnDefs = list(
+                               list(className = 'dt-nowrap', targets = '_all'),
+                               list(width = '110px', targets = 4)))
+        ))
+
+        output$sana_progress = renderText({
+            tbl = input_files$probe_table
+            paste0(sum(nzchar(tbl[["Sana project"]])), " / ", nrow(tbl),
+                   " antibodies have a Sana project.")
+        })
+
+        insert_me1 = tags$div(
+            tags$p("Assign Sana project",
+                   class="h5 text-primary fw-bold"),
+            tags$p("Select antibodies, then click a project.",
+                   class="text-secondary"),
+            radioButtons("sana_tag", NULL, choices = SANA_PROJECTS,
+                         selected = if (is.null(input$sana_tag)) SANA_PROJECTS[1] else input$sana_tag),
+            actionButton("sana_tag_apply", "Assign",
+                         class="btn-warning", width="100%"),
+            tags$br(), tags$br(),
+            actionButton("sana_tag_clear", "Clear",
+                         class="btn-secondary", width="100%"),
+            tags$br(), tags$br(),
+            tags$p("Assigned", class="h6 text-secondary fw-bold"),
+            tags$p(textOutput("sana_progress", inline = TRUE), class="h6 text-secondary"),
+            tags$br(),
+            actionButton("sana_assign_done", "Done",
+                         class="btn-primary", width="100%")
+        )
+
+        insertUI(
+            selector = "#main_contents",
+            where = "afterEnd",
+
+            ui = tags$div(
+                id = "main_contents1",
+
+                tags$div(
+                    class="row",
+
+                    tags$div(
+                        class="col",
+                        style="flex: 0 0 20%;",
+                        id = "main_contents_col1",
+                        insert_me1
+                    ),
+
+                    tags$div(
+                        class="col",
+                        id = "main_contents_col2",
+                        DT::dataTableOutput("sana_probe_table")
+                    )
+                )
+            )
+        )
+    }
+
     observe({
-        if (!is.null(input$experiment_type) & !is.null(input$dose_type)) {
-            if (input$experiment_type!="none" & input$dose_type!="none") {
-                updateActionButton(session, "qc_report", disabled = FALSE)
-            }else{
-                updateActionButton(session, "qc_report", disabled = TRUE)
-            }
+        if (identical(input$sana_project, "multiple")) show_assign_page()
+    }) |> bindEvent(input$sana_project)
+
+    observe({ show_assign_page() }) |> bindEvent(input$assign_sana)
+
+    tag_selected = function(tag) {
+        rows = input$sana_probe_table_rows_selected
+        if (length(rows) == 0) {
+            showNotification("Select one or more antibodies first.",
+                             type = "warning", duration = 3)
+            return(invisible(NULL))
         }
+        tbl = input_files$probe_table
+        tbl[["Sana project"]] = if (is.null(tag)) {
+            replace(tbl[["Sana project"]], rows, "")
+        } else {
+            add_sana_tag(tbl[["Sana project"]], rows, tag)
+        }
+        input_files$probe_table = tbl
+        DT::replaceData(DT::dataTableProxy("sana_probe_table"), tbl, resetPaging = FALSE)
+    }
+
+    observe({ tag_selected(input$sana_tag) }) |> bindEvent(input$sana_tag_apply)
+    observe({ tag_selected(NULL) })           |> bindEvent(input$sana_tag_clear)
+
+    observe({ show_annotation_page() }) |> bindEvent(input$sana_assign_done)
+
+
+    # step 8: enable "Proceed to Generate QC Report"
+    sana_ready = reactive({
+        s = input$sana_project
+        if (!isTruthy(s)) return(FALSE)
+        if (s == "other") return(isTruthy(input$sana_project_other) && nzchar(trimws(input$sana_project_other)))
+        if (s == "multiple") {
+            tbl = input_files$probe_table
+            return(!is.null(tbl) && all(nzchar(tbl[["Sana project"]])))
+        }
+        TRUE
     })
-    
-    
+
+    proceed_ok = function() {
+        !is.null(input$experiment_type) && !is.null(input$dose_type) &&
+            input$experiment_type != "none" && input$dose_type != "none" &&
+            sana_ready()
+    }
+
+    observe({
+        updateActionButton(session, "qc_report", disabled = !proceed_ok())
+    })
+
+
     # step 9: semantic qc report
     observe({
         
@@ -832,7 +968,11 @@ server = function(input, output, session) {
                                               Sys.info()[["nodename"]]),
                            experiment_type=input$experiment_type,
                            dose_type=input$dose_type,
-                           notes = input$notes)
+                           notes = input$notes,
+                           sana_project = input$sana_project,
+                           sana_project_other = input$sana_project_other,
+                           probe_tags = setNames(input_files$probe_table[["Sana project"]],
+                                                 input_files$probe_table[["Probe ID"]]))
 
         # write mfi channel csv for fcs assays
         if (input$selected_assay=="fcs" && isTruthy(input$select_mfi_ch)) {

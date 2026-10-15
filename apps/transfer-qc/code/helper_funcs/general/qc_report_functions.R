@@ -920,7 +920,10 @@ approved_qc_report = function(data_path,
                               author_qc = "unknown",
                               experiment_type = "none",
                               dose_type = "none",
-                              notes="none") {
+                              notes="none",
+                              sana_project = "none",
+                              sana_project_other = "",
+                              probe_tags = NULL) {
     
     fig_path = paste0(data_path, "/qc-report.pdf")
     make_qc_report(pinfo_sheets, merge_info, fig_path, approved=TRUE)
@@ -940,7 +943,9 @@ approved_qc_report = function(data_path,
     merged_data$experiment_type = experiment_type
     merged_data$dose_type = dose_type
     merged_data$notes = notes
-    
+    merged_data$sana_project = sana_project_column(merged_data, sana_project,
+                                                   sana_project_other, probe_tags)
+
     table_path = paste0(data_path, "/merged-data.csv")
     write.csv(merged_data, file=table_path, row.names=FALSE)
 }
