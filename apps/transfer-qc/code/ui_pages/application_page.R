@@ -67,6 +67,45 @@ application_page = bslib::nav_panel(
             #data_path { 
             color: #017BC2; 
             }
+
+            .sana-consts {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 14px;
+            }
+
+            .sana-const {
+            display: inline-flex;
+            font-size: 13px;
+            line-height: 1;
+            border: 1px solid #cfd4e6;
+            border-radius: 4px;
+            overflow: hidden;
+            }
+
+            .sana-const-key {
+            padding: 5px 8px;
+            background: #eef0f8;
+            color: #5c6370;
+            }
+
+            .sana-const-val {
+            padding: 5px 8px;
+            background: #ffffff;
+            color: #212529;
+            font-weight: 600;
+            }
+
+            #sana_well_table th {
+            white-space: normal;
+            }
+
+            #sana_well_table th.sorting,
+            #sana_well_table th.sorting_asc,
+            #sana_well_table th.sorting_desc {
+            padding-right: 18px;
+            }
         ")
     ),
     

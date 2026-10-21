@@ -1,18 +1,23 @@
 SANA_PROJECTS = c("SANA01" = "SANA01", "SANA03" = "SANA03", "SANA04" = "SANA04")
 
-probe_table = function(pinfo_sheets) {
-    cols = c("Probe ID", "Probe Type", "Platename")
+well_table = function(pinfo_sheets) {
+    cols = c("Platename", "Plate Position", "Target Spec ID", "Probe ID",
+             "Probe Quant Type", "Probe Quant Value", "Primary Role")
     d = do.call(rbind, lapply(pinfo_sheets, function(x) x[, cols]))
-    agg = function(v) paste(sort(unique(v[!is.na(v) & v != ""])), collapse = ", ")
-    ids = unique(d[["Probe ID"]])
-    by_id = function(col) unname(sapply(ids, function(i) agg(d[d[["Probe ID"]] == i, col])))
-    data.frame(
-        "Probe ID"     = ids,
-        "Probe Type"   = by_id("Probe Type"),
-        "Platename"    = by_id("Platename"),
-        "Sana project" = "",
-        check.names = FALSE, stringsAsFactors = FALSE)
+    rownames(d) = NULL
+    d[["Sana Project"]] = ""
+    d
 }
+
+well_key = function(d) paste(d[["Platename"]], d[["Plate Position"]], sep = "|")
+
+well_constants = function(d) {
+    cols = setdiff(names(d), c("Plate Position", "Sana Project"))
+    cols = cols[vapply(cols, function(k) length(unique(d[[k]])) == 1, logical(1))]
+    vapply(cols, function(k) as.character(d[[k]][1]), character(1))
+}
+
+well_display = function(d) d[, setdiff(names(d), names(well_constants(d))), drop = FALSE]
 
 add_sana_tag = function(tags, rows, tag) {
     cur = strsplit(tags[rows], "|", fixed = TRUE)
@@ -20,9 +25,9 @@ add_sana_tag = function(tags, rows, tag) {
     tags
 }
 
-sana_project_column = function(merged_data, choice, other = "", probe_tags = NULL) {
+sana_project_column = function(merged_data, choice, other = "", well_tags = NULL) {
     n = nrow(merged_data)
-    if (choice == "multiple") return(unname(probe_tags[merged_data[["Probe ID"]]]))
+    if (choice == "multiple") return(unname(well_tags[well_key(merged_data)]))
     if (choice == "other") return(rep(trimws(other), n))
     rep(choice, n)
 }

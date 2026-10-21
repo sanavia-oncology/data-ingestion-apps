@@ -195,6 +195,9 @@ server = function(input, output, session) {
         if (isTruthy(input$perform_checks)) {
             removeUI(selector = "#main_contents1")
         }
+        input_files$well_table = NULL
+        input_files$dicts = NULL
+        input_files$name_tables = NULL
         
         #------------------------- load pinfo_sheets & assay_data
         selected_project = input_files$selected_project
@@ -615,12 +618,10 @@ server = function(input, output, session) {
 
                 insert_me = tags$div(
                     tags$br(),
-                    tags$p("Proceed to annotation page",
-                           class="h6 text-secondary"),
                     actionButton(
                         inputId = "add_notes",
-                        label = "Add notes to your experiment",
-                        class = "btn-secondary"
+                        label = "Proceed",
+                        class = "btn-warning"
                     )
                 )
             }
@@ -646,8 +647,8 @@ server = function(input, output, session) {
         removeUI(selector = "#main_contents1")
         cur = function(id, default) if (is.null(input[[id]])) default else input[[id]]
         pinfo_sheets = err_react_vals$data_list[["pinfo_sheets"]]
-        if (is.null(input_files$probe_table)) {
-            input_files$probe_table = probe_table(pinfo_sheets)
+        if (is.null(input_files$well_table)) {
+            input_files$well_table = well_table(pinfo_sheets)
         }
 
         insert_me1 = tags$div(
@@ -695,38 +696,32 @@ server = function(input, output, session) {
                         "input.sana_project == 'other'",
                         textInput("sana_project_other", "Project name:",
                                   value = cur("sana_project_other", ""))
-                    ),
-                    conditionalPanel(
-                        "input.sana_project == 'multiple'",
-                        tags$label(class = "control-label", HTML("&nbsp;")),
-                        actionButton("assign_sana", "Edit assignments",
-                                     class = "btn-secondary", width = "100%")
                     )
-                ),
+                )
+            )
+        )
 
-                tags$p("Type in additional notes",
-                       class="h5 text-primary fw-bold"),
-                tags$div(
-                    tags$p("Include any additional notes here that will
-                           help to understand the context of this experiment.",
-                           class="text-secondary"),
-                    tags$div(
-                        textAreaInput(
-                            "notes",
-                            "Text input",
-                            value = cur("notes", ""),
-                            placeholder = "The quick brown fox jumped over the lazy dog...",
-                            width="480px",
-                        )
-                    ),
-                ),
+        insert_me2 = tags$div(
+            tags$p("Type in additional notes",
+                   class="h5 text-primary fw-bold"),
+            tags$div(
+                tags$p("Include any additional notes here that will
+                       help to understand the context of this experiment.",
+                       class="text-secondary"),
+                textAreaInput(
+                    "notes",
+                    "Text input",
+                    value = cur("notes", ""),
+                    placeholder = "The quick brown fox jumped over the lazy dog...",
+                    width="480px",
+                )
             ),
-
             tags$br(),
             actionButton("qc_report",
-                         "Proceed to Generate Semantic QC Report",
+                         "Proceed",
                          class="btn-warning",
-                         disabled = !proceed_ok())
+                         disabled = !proceed_ok()),
+            tags$br(), tags$br()
         )
 
         insertUI(
@@ -748,6 +743,7 @@ server = function(input, output, session) {
                     tags$div(
                         class="col",
                         id = "main_contents_col2",
+                        insert_me2,
                         tags$div(
                             id = "main_contents_col2_topmark_div",
                         ),
@@ -760,45 +756,73 @@ server = function(input, output, session) {
     observe({ show_annotation_page() }) |> bindEvent(input$add_notes)
 
 
-    # step 7b: multiple -> assign each antibody
+    # step 7b: multiple -> assign each well
     show_assign_page = function() {
         removeUI(selector = "#main_contents1")
 
-        output$sana_probe_table = DT::renderDataTable(DT::datatable(
-            isolate(input_files$probe_table),
+        consts = well_constants(isolate(input_files$well_table))
+
+        output$sana_well_table = DT::renderDataTable(DT::datatable(
+            well_display(isolate(input_files$well_table)),
             selection = "multiple",
             options = list(pageLength = 10,
                            dom = "tpf",
                            scrollX = TRUE,
                            columnDefs = list(
-                               list(className = 'dt-nowrap', targets = '_all'),
-                               list(width = '110px', targets = 4)))
+                               list(className = 'dt-nowrap', targets = '_all')))
         ))
 
         output$sana_progress = renderText({
-            tbl = input_files$probe_table
-            paste0(sum(nzchar(tbl[["Sana project"]])), " / ", nrow(tbl),
-                   " antibodies have a Sana project.")
+            tbl = input_files$well_table
+            paste0(sum(nzchar(tbl[["Sana Project"]])), " / ", nrow(tbl), " assigned")
         })
 
         insert_me1 = tags$div(
             tags$p("Assign Sana project",
                    class="h5 text-primary fw-bold"),
-            tags$p("Select antibodies, then click a project.",
-                   class="text-secondary"),
-            radioButtons("sana_tag", NULL, choices = SANA_PROJECTS,
-                         selected = if (is.null(input$sana_tag)) SANA_PROJECTS[1] else input$sana_tag),
-            actionButton("sana_tag_apply", "Assign",
-                         class="btn-warning", width="100%"),
-            tags$br(), tags$br(),
-            actionButton("sana_tag_clear", "Clear",
-                         class="btn-secondary", width="100%"),
-            tags$br(), tags$br(),
-            tags$p("Assigned", class="h6 text-secondary fw-bold"),
-            tags$p(textOutput("sana_progress", inline = TRUE), class="h6 text-secondary"),
-            tags$br(),
-            actionButton("sana_assign_done", "Done",
-                         class="btn-primary", width="100%")
+            if (length(consts)) tags$div(
+                class = "sana-consts",
+                lapply(names(consts), function(k) tags$span(
+                    class = "sana-const",
+                    tags$span(k, class = "sana-const-key"),
+                    tags$span(consts[[k]], class = "sana-const-val")))
+            ),
+            tags$div(
+                class = "row",
+
+                tags$div(
+                    class = "col",
+                    style = "min-width: 0;",
+                    id = "main_contents_col1",
+                    DT::dataTableOutput("sana_well_table")
+                ),
+
+                tags$div(
+                    class = "col",
+                    style = "flex: 0 0 170px;",
+                    id = "main_contents_col2",
+                    radioButtons("sana_tag", NULL, choices = c(SANA_PROJECTS, "Other" = "other"),
+                                 selected = if (is.null(input$sana_tag)) SANA_PROJECTS[1] else input$sana_tag,
+                                 width = "100%"),
+                    conditionalPanel(
+                        "input.sana_tag == 'other'",
+                        textInput("sana_tag_other", NULL,
+                                  value = if (is.null(input$sana_tag_other)) "" else input$sana_tag_other,
+                                  placeholder = "Project name", width = "100%")
+                    ),
+                    actionButton("sana_tag_apply", "Assign",
+                                 class="btn-warning", width="100%"),
+                    tags$br(), tags$br(),
+                    actionButton("sana_tag_clear", "Clear",
+                                 class="btn-secondary", width="100%"),
+                    tags$br(), tags$br(),
+                    tags$p(textOutput("sana_progress", inline = TRUE),
+                           class="text-secondary", style="margin-bottom: 6px;"),
+                    actionButton("sana_assign_done", "Done",
+                                 class="btn-primary", width="100%",
+                                 disabled = !assign_done_ok())
+                )
+            )
         )
 
         insertUI(
@@ -813,59 +837,228 @@ server = function(input, output, session) {
 
                     tags$div(
                         class="col",
-                        style="flex: 0 0 20%;",
-                        id = "main_contents_col1",
                         insert_me1
-                    ),
-
-                    tags$div(
-                        class="col",
-                        id = "main_contents_col2",
-                        DT::dataTableOutput("sana_probe_table")
                     )
                 )
             )
         )
     }
 
-    observe({
-        if (identical(input$sana_project, "multiple")) show_assign_page()
-    }) |> bindEvent(input$sana_project)
-
-    observe({ show_assign_page() }) |> bindEvent(input$assign_sana)
-
     tag_selected = function(tag) {
-        rows = input$sana_probe_table_rows_selected
+        rows = input$sana_well_table_rows_selected
         if (length(rows) == 0) {
-            showNotification("Select one or more antibodies first.",
+            showNotification("Select one or more wells first.",
                              type = "warning", duration = 3)
             return(invisible(NULL))
         }
-        tbl = input_files$probe_table
-        tbl[["Sana project"]] = if (is.null(tag)) {
-            replace(tbl[["Sana project"]], rows, "")
-        } else {
-            add_sana_tag(tbl[["Sana project"]], rows, tag)
+        if (identical(tag, "other")) {
+            tag = trimws(input$sana_tag_other)
+            if (!nzchar(tag)) {
+                showNotification("Type a project name.",
+                                 type = "warning", duration = 3)
+                return(invisible(NULL))
+            }
         }
-        input_files$probe_table = tbl
-        DT::replaceData(DT::dataTableProxy("sana_probe_table"), tbl, resetPaging = FALSE)
+        tbl = input_files$well_table
+        tbl[["Sana Project"]] = if (is.null(tag)) {
+            replace(tbl[["Sana Project"]], rows, "")
+        } else {
+            add_sana_tag(tbl[["Sana Project"]], rows, tag)
+        }
+        input_files$well_table = tbl
+        DT::replaceData(DT::dataTableProxy("sana_well_table"), well_display(tbl), resetPaging = FALSE)
     }
 
     observe({ tag_selected(input$sana_tag) }) |> bindEvent(input$sana_tag_apply)
     observe({ tag_selected(NULL) })           |> bindEvent(input$sana_tag_clear)
 
-    observe({ show_annotation_page() }) |> bindEvent(input$sana_assign_done)
+    assign_done_ok = reactive({
+        tbl = input_files$well_table
+        !is.null(tbl) && all(nzchar(tbl[["Sana Project"]]))
+    })
+
+    observe({
+        updateActionButton(session, "sana_assign_done", disabled = !assign_done_ok())
+    })
+
+    observe({ show_name_matching() }) |> bindEvent(input$sana_assign_done)
+
+    # step 8b: upload the dictionaries and match probe and target names
+    match_kind = reactiveVal(NULL)
+    dict_loaded = reactiveVal(0)
+
+    show_name_matching = function() {
+        pending = Filter(function(k) {
+            t = input_files$name_tables[[k]]
+            is.null(t) || !all(nzchar(t$name))
+        }, names(NAME_KINDS))
+        if (length(pending)) show_match_page(pending[1]) else show_qc_report()
+    }
+
+    lapply(names(NAME_KINDS), function(kind) {
+        observe({
+            f = input[[paste0("name_dict_", kind)]]
+            req(f)
+            k = NAME_KINDS[[kind]]
+            dict = tryCatch(read_dict(f$datapath, k$name_col), error = function(e) {
+                showNotification(conditionMessage(e), type = "error", duration = 6)
+                NULL
+            })
+            req(dict)
+            input_files$dicts[[kind]] = dict
+            input_files$name_tables[[kind]] = name_table(input_files$well_table[[k$column]], dict)
+            updateSelectizeInput(session, "name_pick", choices = dict_choices(dict),
+                                 selected = character(0))
+            dict_loaded(dict_loaded() + 1)
+        }) |> bindEvent(input[[paste0("name_dict_", kind)]])
+    })
+
+    show_match_page = function(kind) {
+        removeUI(selector = "#main_contents1")
+        match_kind(kind)
+        k = NAME_KINDS[[kind]]
+
+        output$name_table = DT::renderDataTable({
+            dict_loaded()
+            tbl = isolate(input_files$name_tables[[kind]])
+            req(tbl)
+            DT::datatable(
+                name_display(tbl, k),
+                selection = "multiple",
+                options = list(pageLength = 10,
+                               dom = "tpf",
+                               scrollX = TRUE,
+                               columnDefs = list(
+                                   list(className = 'dt-nowrap', targets = '_all')))
+            )
+        })
+
+        output$name_subtitle = renderText({
+            dict_loaded()
+            tbl = isolate(input_files$name_tables[[kind]])
+            if (is.null(tbl)) {
+                paste0("Upload the dictionary to match the ", k$column, "s.")
+            } else {
+                paste0(sum(!tbl$auto), " of ", nrow(tbl), " ", k$column,
+                       "s are not in the dictionary. Select them and pick their dictionary entry.")
+            }
+        })
+
+        output$name_progress = renderText({
+            t = input_files$name_tables[[kind]]
+            if (is.null(t)) "" else paste0(sum(nzchar(t$name)), " / ", nrow(t), " matched")
+        })
+
+        insert_me1 = tags$div(
+            tags$p(k$title,
+                   class="h5 text-primary fw-bold"),
+            tags$p(textOutput("name_subtitle", inline = TRUE),
+                   class="text-secondary"),
+            tags$div(
+                class = "row",
+
+                tags$div(
+                    class = "col",
+                    style = "min-width: 0;",
+                    id = "main_contents_col1",
+                    fileInput(paste0("name_dict_", kind), k$upload, accept = ".csv",
+                              buttonLabel = "Browse...", placeholder = "No file selected",
+                              width = "440px"),
+                    DT::dataTableOutput("name_table")
+                ),
+
+                tags$div(
+                    class = "col",
+                    style = "flex: 0 0 260px;",
+                    id = "main_contents_col2",
+                    selectizeInput("name_pick", NULL,
+                                   choices = dict_choices(isolate(input_files$dicts[[kind]])),
+                                   selected = character(0), width = "100%",
+                                   options = list(placeholder = "Search the dictionary",
+                                                  maxOptions = 50,
+                                                  searchField = c("label", "value"),
+                                                  render = DICT_RENDER,
+                                                  onInitialize = I('function() { this.setValue(""); }'))),
+                    actionButton("name_apply", "Assign",
+                                 class="btn-warning", width="100%"),
+                    tags$br(), tags$br(),
+                    actionButton("name_clear", "Clear",
+                                 class="btn-secondary", width="100%"),
+                    tags$br(), tags$br(),
+                    tags$p(textOutput("name_progress", inline = TRUE),
+                           class="text-secondary", style="margin-bottom: 6px;"),
+                    actionButton("name_done", "Proceed",
+                                 class="btn-primary", width="100%",
+                                 disabled = TRUE)
+                )
+            )
+        )
+
+        insertUI(
+            selector = "#main_contents",
+            where = "afterEnd",
+
+            ui = tags$div(
+                id = "main_contents1",
+
+                tags$div(
+                    class="row",
+
+                    tags$div(
+                        class="col",
+                        insert_me1
+                    )
+                )
+            )
+        )
+    }
+
+    name_pick_apply = function(pick) {
+        kind = match_kind()
+        tbl = input_files$name_tables[[kind]]
+        rows = input$name_table_rows_selected
+        if (!length(rows)) {
+            showNotification("Select one or more rows first.", type = "warning", duration = 3)
+            return(invisible(NULL))
+        }
+        if (any(tbl$auto[rows])) {
+            showNotification("Rows already in the dictionary cannot be changed.",
+                             type = "warning", duration = 3)
+            return(invisible(NULL))
+        }
+        if (!is.null(pick) && !isTruthy(pick)) {
+            showNotification("Pick a dictionary entry.", type = "warning", duration = 3)
+            return(invisible(NULL))
+        }
+        dict = input_files$dicts[[kind]]
+        tbl$name[rows] = if (is.null(pick)) "" else dict$alias[match(pick, dict$id)]
+        input_files$name_tables[[kind]] = tbl
+        DT::replaceData(DT::dataTableProxy("name_table"), name_display(tbl, NAME_KINDS[[kind]]),
+                        resetPaging = FALSE)
+        updateSelectizeInput(session, "name_pick", selected = character(0))
+    }
+
+    observe({ name_pick_apply(input$name_pick) }) |> bindEvent(input$name_apply)
+    observe({ name_pick_apply(NULL) })            |> bindEvent(input$name_clear)
+
+    name_done_ok = reactive({
+        kind = match_kind()
+        t = if (is.null(kind)) NULL else input_files$name_tables[[kind]]
+        !is.null(t) && all(nzchar(t$name))
+    })
+
+    observe({
+        updateActionButton(session, "name_done", disabled = !name_done_ok())
+    })
+
+    observe({ show_name_matching() }) |> bindEvent(input$name_done)
 
 
-    # step 8: enable "Proceed to Generate QC Report"
+    # step 8: enable "Proceed"
     sana_ready = reactive({
         s = input$sana_project
         if (!isTruthy(s)) return(FALSE)
         if (s == "other") return(isTruthy(input$sana_project_other) && nzchar(trimws(input$sana_project_other)))
-        if (s == "multiple") {
-            tbl = input_files$probe_table
-            return(!is.null(tbl) && all(nzchar(tbl[["Sana project"]])))
-        }
         TRUE
     })
 
@@ -881,65 +1074,67 @@ server = function(input, output, session) {
 
 
     # step 9: semantic qc report
-    observe({
-        
-        if (isTruthy(input$qc_report)) {
-            removeUI(selector = "#qc_report_div")
-        }
-        
+    show_qc_report = function() {
+        removeUI(selector = "#main_contents1")
+
         data_list = err_react_vals$data_list
         merge_info = data_list[["merge_info"]]
         pinfo_sheets = data_list[["pinfo_sheets"]]
-        
+
         app_dir = paste0(getwd(), "/")
         preview_path = file.path(app_dir, "www/docs/tlgs/qc-report-preview.pdf")
         make_qc_report(pinfo_sheets, merge_info, preview_path, approved = FALSE)
-        
-        insert_me = tags$div(
-            id = "qc_report_div",
-            
+
+        insert_me1 = tags$div(
+            tags$p("Semantic QC Report",
+                   class="h5 text-primary fw-bold"),
+
+            tags$p(paste0("Analysis date: ", Sys.Date()),
+                   class="text-secondary"),
+
             tags$div(
-                class="row",
-                
-                tags$p("Semantic QC Report",
-                       class="h5 text-primary fw-bold"),
-                
-                tags$p(paste0("Analysis date: ", Sys.Date()),
-                       class="text-secondary"),
-                
-                tags$div(
-                    style="height: 450px",
-                    tags$iframe(
-                        src="docs/tlgs/qc-report-preview.pdf",
-                        width="100%",
-                        height="100%"
-                    )
-                ),
-                
-                tags$p("Review and accept for semantic accuracy.",
-                       class="text-secondary"),
+                style="height: 450px",
+                tags$iframe(
+                    src="docs/tlgs/qc-report-preview.pdf",
+                    width="100%",
+                    height="100%"
+                )
             ),
-            
-            tags$div(
-                class="row",
-                bslib::layout_column_wrap(
-                    tags$a("Semantic Error Found (Please Fix & Re-start)",
-                           href = "",
-                           class="btn btn-secondary"),
-                    actionButton("accept_report",
-                                 "Accept QC Report",
-                                 class="btn-primary")
+
+            tags$p("Review and accept for semantic accuracy.",
+                   class="text-secondary"),
+
+            bslib::layout_column_wrap(
+                tags$a("Semantic Error Found (Please Fix & Re-start)",
+                       href = "",
+                       class="btn btn-secondary"),
+                actionButton("accept_report",
+                             "Accept QC Report",
+                             class="btn-primary")
+            )
+        )
+
+        insertUI(
+            selector = "#main_contents",
+            where = "afterEnd",
+
+            ui = tags$div(
+                id = "main_contents1",
+
+                tags$div(
+                    class="row",
+
+                    tags$div(
+                        class="col",
+                        insert_me1
+                    )
                 )
             )
         )
-        
-        insertUI(
-            selector = "#main_contents_col2_topmark_div",
-            where = "afterEnd",
-            ui = insert_me
-        )
-        
-        
+    }
+
+    observe({
+        if (identical(input$sana_project, "multiple")) show_assign_page() else show_name_matching()
     }) |> bindEvent(input$qc_report)
     
     
@@ -971,8 +1166,10 @@ server = function(input, output, session) {
                            notes = input$notes,
                            sana_project = input$sana_project,
                            sana_project_other = input$sana_project_other,
-                           probe_tags = setNames(input_files$probe_table[["Sana project"]],
-                                                 input_files$probe_table[["Probe ID"]]))
+                           well_tags = setNames(input_files$well_table[["Sana Project"]],
+                                                well_key(input_files$well_table)),
+                           probe_names = input_files$name_tables$probe,
+                           target_names = input_files$name_tables$target)
 
         # write mfi channel csv for fcs assays
         if (input$selected_assay=="fcs" && isTruthy(input$select_mfi_ch)) {

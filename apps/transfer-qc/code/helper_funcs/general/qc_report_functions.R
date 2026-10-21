@@ -923,7 +923,9 @@ approved_qc_report = function(data_path,
                               notes="none",
                               sana_project = "none",
                               sana_project_other = "",
-                              probe_tags = NULL) {
+                              well_tags = NULL,
+                              probe_names = NULL,
+                              target_names = NULL) {
     
     fig_path = paste0(data_path, "/qc-report.pdf")
     make_qc_report(pinfo_sheets, merge_info, fig_path, approved=TRUE)
@@ -944,7 +946,18 @@ approved_qc_report = function(data_path,
     merged_data$dose_type = dose_type
     merged_data$notes = notes
     merged_data$sana_project = sana_project_column(merged_data, sana_project,
-                                                   sana_project_other, probe_tags)
+                                                   sana_project_other, well_tags)
+    if (!is.null(probe_names)) {
+        i = match(trimws(merged_data[["Probe ID"]]), probe_names$id)
+        merged_data$probe_name = probe_names$name[i]
+        merged_data$assembly_type = assembly_type(merged_data$probe_name)
+        merged_data$is_probe_alias = probe_names$auto[i]
+    }
+    if (!is.null(target_names)) {
+        i = match(trimws(merged_data[["Target Spec ID"]]), target_names$id)
+        merged_data$target_spec_name = target_names$name[i]
+        merged_data$is_target_alias = target_names$auto[i]
+    }
 
     table_path = paste0(data_path, "/merged-data.csv")
     write.csv(merged_data, file=table_path, row.names=FALSE)
