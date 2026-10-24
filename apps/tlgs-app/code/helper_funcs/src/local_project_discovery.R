@@ -66,7 +66,7 @@ results_summary_list = function(project_fldr) {
                    author_exp=author_exp,
                    author_qc=author_qc,
                    author_gating=author_gating,
-                   "conc [min, max] (ug/ml)"=crng,
+                   "conc [min, max]"=crng,
                    plates_n=nplates)
         
         return(res)

@@ -21,7 +21,7 @@ app_card = tags$div(
             bg = "rgba(238, 238, 238, 1)",
             
             tags$p(id="current_date",
-                   paste0("Today's date: ", Sys.Date()),
+                   textOutput("today", inline = TRUE),
                    class="text-secondary"),
             
             tags$div(

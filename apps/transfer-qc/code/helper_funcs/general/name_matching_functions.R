@@ -1,18 +1,20 @@
-read_dict = function(path, name_col) {
+read_dict = function(path) {
     d = read.csv(path, check.names = FALSE, stringsAsFactors = FALSE, fileEncoding = "UTF-8-BOM")
-    if (!all(c(name_col, "colloquial_id") %in% names(d))) {
-        stop("The dictionary needs the columns ", name_col, " and colloquial_id")
+    kind = names(Filter(function(k) k$name_col %in% names(d), NAME_KINDS))
+    if (length(kind) != 1 || !"colloquial_id" %in% names(d)) {
+        stop("The dictionary needs colloquial_id and one of ",
+             paste(vapply(NAME_KINDS, `[[`, "", "name_col"), collapse = " or "))
     }
-    d = data.frame(id = trimws(d[["colloquial_id"]]), alias = trimws(d[[name_col]]),
+    d = data.frame(id = trimws(d[["colloquial_id"]]), alias = trimws(d[[NAME_KINDS[[kind]]$name_col]]),
                    stringsAsFactors = FALSE)
-    d[nzchar(d$id) & nzchar(d$alias) & !duplicated(d$id), ]
+    list(kind = kind, dict = d[nzchar(d$id) & nzchar(d$alias) & !duplicated(d$id), ])
 }
 
 NAME_KINDS = list(
     probe = list(column = "Probe ID", name = "Probe name", title = "Match probe names",
-                 name_col = "probe_name", upload = "Upload the probe dictionary (csv)"),
+                 name_col = "probe_name", dict = "probe dictionary"),
     target = list(column = "Target Spec ID", name = "Target spec name", title = "Match target specimen names",
-                  name_col = "target_spec_name", upload = "Upload the target specimen dictionary (csv)")
+                  name_col = "target_spec_name", dict = "target specimen dictionary")
 )
 
 name_table = function(ids, dict) {

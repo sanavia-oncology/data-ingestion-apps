@@ -20,6 +20,7 @@ server = function(input, output, session) {
     
     # step 2: make front table
     input_files = reactiveValues()
+    output$today = renderText(paste0("Today's date: ", Sys.Date()))
     observe({
         if (isTruthy(input$selected_assay)) {
             removeUI(selector = "#main_contents1")
@@ -197,7 +198,9 @@ server = function(input, output, session) {
         }
         input_files$well_table = NULL
         input_files$dicts = NULL
+        input_files$dict_files = NULL
         input_files$name_tables = NULL
+        done_kinds(character(0))
         
         #------------------------- load pinfo_sheets & assay_data
         selected_project = input_files$selected_project
@@ -886,12 +889,16 @@ server = function(input, output, session) {
     # step 8b: upload the dictionaries and match probe and target names
     match_kind = reactiveVal(NULL)
     dict_loaded = reactiveVal(0)
+    name_note = reactiveVal("")
+    name_stage = reactiveVal("upload")
+    done_kinds = reactiveVal(character(0))
+
+    loaded_note = function(kind) {
+        paste0(input_files$dict_files[[kind]], ": ", nrow(input_files$dicts[[kind]]), " entries loaded.")
+    }
 
     show_name_matching = function() {
-        pending = Filter(function(k) {
-            t = input_files$name_tables[[k]]
-            is.null(t) || !all(nzchar(t$name))
-        }, names(NAME_KINDS))
+        pending = setdiff(names(NAME_KINDS), done_kinds())
         if (length(pending)) show_match_page(pending[1]) else show_qc_report()
     }
 
@@ -899,17 +906,24 @@ server = function(input, output, session) {
         observe({
             f = input[[paste0("name_dict_", kind)]]
             req(f)
-            k = NAME_KINDS[[kind]]
-            dict = tryCatch(read_dict(f$datapath, k$name_col), error = function(e) {
+            r = tryCatch(read_dict(f$datapath), error = function(e) {
                 showNotification(conditionMessage(e), type = "error", duration = 6)
                 NULL
             })
-            req(dict)
-            input_files$dicts[[kind]] = dict
-            input_files$name_tables[[kind]] = name_table(input_files$well_table[[k$column]], dict)
-            updateSelectizeInput(session, "name_pick", choices = dict_choices(dict),
-                                 selected = character(0))
-            dict_loaded(dict_loaded() + 1)
+            req(r)
+            k = NAME_KINDS[[r$kind]]
+            input_files$dicts[[r$kind]] = r$dict
+            input_files$dict_files[[r$kind]] = f$name
+            input_files$name_tables[[r$kind]] = name_table(input_files$well_table[[k$column]], r$dict)
+            if (r$kind == kind) {
+                updateSelectizeInput(session, "name_pick", choices = dict_choices(r$dict),
+                                     selected = character(0))
+                dict_loaded(dict_loaded() + 1)
+                name_note(loaded_note(kind))
+            } else {
+                name_note(paste0(f$name, " is the ", k$dict, ". It is saved for \"", k$title,
+                                 "\". Upload the ", NAME_KINDS[[kind]]$dict, " to continue."))
+            }
         }) |> bindEvent(input[[paste0("name_dict_", kind)]])
     })
 
@@ -917,6 +931,11 @@ server = function(input, output, session) {
         removeUI(selector = "#main_contents1")
         match_kind(kind)
         k = NAME_KINDS[[kind]]
+        name_stage("upload")
+        name_note(if (is.null(isolate(input_files$dicts[[kind]]))) "" else isolate(loaded_note(kind)))
+        output$name_note = renderText(name_note())
+        output$name_stage = reactive(name_stage())
+        outputOptions(output, "name_stage", suspendWhenHidden = FALSE)
 
         output$name_table = DT::renderDataTable({
             dict_loaded()
@@ -936,12 +955,9 @@ server = function(input, output, session) {
         output$name_subtitle = renderText({
             dict_loaded()
             tbl = isolate(input_files$name_tables[[kind]])
-            if (is.null(tbl)) {
-                paste0("Upload the dictionary to match the ", k$column, "s.")
-            } else {
-                paste0(sum(!tbl$auto), " of ", nrow(tbl), " ", k$column,
-                       "s are not in the dictionary. Select them and pick their dictionary entry.")
-            }
+            req(tbl)
+            paste0(sum(!tbl$auto), " of ", nrow(tbl), " ", k$column,
+                   "s are not in the dictionary. Select them and pick their dictionary entry.")
         })
 
         output$name_progress = renderText({
@@ -952,44 +968,54 @@ server = function(input, output, session) {
         insert_me1 = tags$div(
             tags$p(k$title,
                    class="h5 text-primary fw-bold"),
-            tags$p(textOutput("name_subtitle", inline = TRUE),
-                   class="text-secondary"),
-            tags$div(
-                class = "row",
+            conditionalPanel(
+                "output.name_stage == 'upload'",
+                fileInput(paste0("name_dict_", kind), paste0("Upload the ", k$dict, " (csv)"),
+                          accept = ".csv", buttonLabel = "Browse...", placeholder = "No file selected",
+                          width = "440px"),
+                tags$p(textOutput("name_note", inline = TRUE), class = "text-secondary"),
+                actionButton("name_upload_done", "Proceed", class = "btn-primary",
+                             disabled = is.null(isolate(input_files$dicts[[kind]])))
+            ),
 
+            conditionalPanel(
+                "output.name_stage == 'match'",
+                tags$p(textOutput("name_subtitle", inline = TRUE),
+                       class="text-secondary"),
                 tags$div(
-                    class = "col",
-                    style = "min-width: 0;",
-                    id = "main_contents_col1",
-                    fileInput(paste0("name_dict_", kind), k$upload, accept = ".csv",
-                              buttonLabel = "Browse...", placeholder = "No file selected",
-                              width = "440px"),
-                    DT::dataTableOutput("name_table")
-                ),
+                    class = "row",
 
-                tags$div(
-                    class = "col",
-                    style = "flex: 0 0 260px;",
-                    id = "main_contents_col2",
-                    selectizeInput("name_pick", NULL,
-                                   choices = dict_choices(isolate(input_files$dicts[[kind]])),
-                                   selected = character(0), width = "100%",
-                                   options = list(placeholder = "Search the dictionary",
-                                                  maxOptions = 50,
-                                                  searchField = c("label", "value"),
-                                                  render = DICT_RENDER,
-                                                  onInitialize = I('function() { this.setValue(""); }'))),
-                    actionButton("name_apply", "Assign",
-                                 class="btn-warning", width="100%"),
-                    tags$br(), tags$br(),
-                    actionButton("name_clear", "Clear",
-                                 class="btn-secondary", width="100%"),
-                    tags$br(), tags$br(),
-                    tags$p(textOutput("name_progress", inline = TRUE),
-                           class="text-secondary", style="margin-bottom: 6px;"),
-                    actionButton("name_done", "Proceed",
-                                 class="btn-primary", width="100%",
-                                 disabled = TRUE)
+                    tags$div(
+                        class = "col",
+                        style = "min-width: 0;",
+                        id = "main_contents_col1",
+                        DT::dataTableOutput("name_table")
+                    ),
+
+                    tags$div(
+                        class = "col",
+                        style = "flex: 0 0 260px;",
+                        id = "main_contents_col2",
+                        selectizeInput("name_pick", NULL,
+                                       choices = dict_choices(isolate(input_files$dicts[[kind]])),
+                                       selected = character(0), width = "100%",
+                                       options = list(placeholder = "Search the dictionary",
+                                                      maxOptions = 50,
+                                                      searchField = c("label", "value"),
+                                                      render = DICT_RENDER,
+                                                      onInitialize = I('function() { this.setValue(""); }'))),
+                        actionButton("name_apply", "Assign",
+                                     class="btn-warning", width="100%"),
+                        tags$br(), tags$br(),
+                        actionButton("name_clear", "Clear",
+                                     class="btn-secondary", width="100%"),
+                        tags$br(), tags$br(),
+                        tags$p(textOutput("name_progress", inline = TRUE),
+                               class="text-secondary", style="margin-bottom: 6px;"),
+                        actionButton("name_done", "Proceed",
+                                     class="btn-primary", width="100%",
+                                     disabled = !isolate(name_done_ok()))
+                    )
                 )
             )
         )
@@ -1012,6 +1038,14 @@ server = function(input, output, session) {
             )
         )
     }
+
+    observe({
+        kind = match_kind()
+        req(kind)
+        updateActionButton(session, "name_upload_done", disabled = is.null(input_files$dicts[[kind]]))
+    })
+
+    observe({ name_stage("match") }) |> bindEvent(input$name_upload_done)
 
     name_pick_apply = function(pick) {
         kind = match_kind()
@@ -1051,7 +1085,10 @@ server = function(input, output, session) {
         updateActionButton(session, "name_done", disabled = !name_done_ok())
     })
 
-    observe({ show_name_matching() }) |> bindEvent(input$name_done)
+    observe({
+        done_kinds(union(done_kinds(), match_kind()))
+        show_name_matching()
+    }) |> bindEvent(input$name_done)
 
 
     # step 8: enable "Proceed"
@@ -1133,8 +1170,62 @@ server = function(input, output, session) {
         )
     }
 
+    proceed_problems = function() {
+        problems = list()
+        ch = input$select_mfi_ch
+        need = switch(input$experiment_type, binding_expr = c("RL", "red", "Binding Experiment"),
+                      intern_expr = c("YL", "yellow", "Internalization Experiment"), NULL)
+        if (!is.null(need) && isTruthy(ch) && !startsWith(ch, need[1])) {
+            problems$channel = list(
+                title = "MFI channel",
+                rows = list(c("Experiment type", need[3], ""), c("Selected channel", ch, "bad"),
+                            c("Required", paste0(need[2], " laser channel, ", need[1], "*"), "")),
+                fix = paste0("Click Perform QC and select an ", need[1], " channel."))
+        }
+        doses = unique(trimws(as.character(input_files$well_table[["Probe Quant Value"]])))
+        doses = doses[nzchar(doses)]
+        multi = switch(input$dose_type, single_dose = FALSE, titration = TRUE, multi_dose = TRUE, NULL)
+        if (!is.null(multi) && multi != (length(doses) > 1)) {
+            label = c(single_dose = "Single Dose", titration = "Multi-Dose Titration",
+                      multi_dose = "Multi-Dose Non-titration")[[input$dose_type]]
+            problems$dose = list(
+                title = "Dose type",
+                rows = list(c("Selected dose type", label, "bad"),
+                            c("Probe Quant Values in the plate sheets (QC_09)",
+                              paste0(length(doses), if (length(doses) == 1) " value: " else " values: ",
+                                     paste(doses, collapse = ", ")), ""),
+                            c("Required", if (multi) "at least two values" else "one value", "")),
+                fix = if (multi) "Choose Single Dose, or fix the plate sheets." else "Choose a multi-dose type, or fix the plate sheets.")
+        }
+        problems
+    }
+
+    problem_section = function(p) {
+        tags$div(
+            class = "mb-4",
+            tags$p(p$title, class = "h5 text-primary fw-bold mb-2"),
+            tags$table(
+                class = "table table-sm mb-2",
+                tags$tbody(lapply(p$rows, function(r) {
+                    tags$tr(tags$th(r[1], class = "fw-semibold text-secondary", style = "width: 45%;"),
+                            tags$td(r[2], class = if (r[3] == "bad") "text-danger fw-semibold" else ""))
+                }))
+            ),
+            tags$p(p$fix, class = "mb-0")
+        )
+    }
+
     observe({
-        if (identical(input$sana_project, "multiple")) show_assign_page() else show_name_matching()
+        problems = proceed_problems()
+        if (length(problems)) {
+            showModal(modalDialog(title = "Fix before proceeding",
+                                  lapply(problems, problem_section),
+                                  footer = modalButton("Back"), easyClose = TRUE))
+        } else if (identical(input$sana_project, "multiple")) {
+            show_assign_page()
+        } else {
+            show_name_matching()
+        }
     }) |> bindEvent(input$qc_report)
     
     

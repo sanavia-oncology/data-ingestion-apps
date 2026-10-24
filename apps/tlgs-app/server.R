@@ -1719,7 +1719,7 @@ server = function(input, output, session) {
                     ),
                     tags$div(
                         class="col",
-                        tags$p("Probe concentration (ug/ml)",
+                        tags$p("Probe concentration",
                                class="h5 text-secondary fw-bold"),
                         selectizeInput(
                             "select_probe_conc",
@@ -1982,7 +1982,7 @@ server = function(input, output, session) {
             
         }else{
             showNotification(
-                ui = "Make selections for both Cell lines and Probe oncentration (ug/ml).",
+                ui = "Make selections for both Cell lines and Probe concentration.",
                 type = "message",
                 duration = 5
             )

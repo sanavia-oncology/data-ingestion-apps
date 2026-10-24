@@ -425,12 +425,12 @@ dup_analysis = function(adam) {
     rownames(adam) = paste0(adam$platename, "|", adam$position)
     target = adam$target_spec_name
     probe = adam$probe_name
-    conc = adam$"conc (ug/ml)"
+    conc = adam[[grep("^conc", colnames(adam), value = TRUE)[1]]]
     
     duplicates = rep("none", nrow(adam))
     names(duplicates) = rownames(adam)
     
-    x = paste0("(", target, ") x (", probe, ") x (", conc, " ug/ml)")
+    x = paste0("(", target, ") x (", probe, ") x (", conc, ")")
     dat_list = split(adam, x)
     ndups = sapply(dat_list, nrow)
     
