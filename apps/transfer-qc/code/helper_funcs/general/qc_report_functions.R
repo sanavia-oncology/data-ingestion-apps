@@ -959,6 +959,15 @@ approved_qc_report = function(data_path,
         merged_data$is_target_alias = target_names$auto[i]
     }
 
+    # K.O. -- added code
+    merged_data[["probe_conc"]] = paste0(merged_data[["Probe Quant Value"]], 
+                                         " ",
+                                         gsub("concentration ", "", merged_data[["Probe Quant Type"]]))
+    
+    dosing_schedule = ifelse(merged_data[["dose_type"]] %in% "titration", "titration", "fixed_dose")
+    merged_data[["dosing_schedule"]] = dosing_schedule
+    # ---------- end
+    
     table_path = paste0(data_path, "/merged-data.csv")
     write.csv(merged_data, file=table_path, row.names=FALSE)
 }
