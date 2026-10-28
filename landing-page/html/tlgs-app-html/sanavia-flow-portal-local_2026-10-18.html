@@ -533,7 +533,7 @@ h1{font-family:var(--f-display);font-weight:400}
 
   <section class="filters" aria-label="Filters">
     <div class="field"><label for="fProbe">Probes <span id="probeCount"></span></label><input type="search" id="fProbe" placeholder="e.g. 3000, 2975, 1431"></div>
-    <div class="cart" aria-label="Data cart"><button type="button" class="btn cart-add" id="cartAdd">Add view to cart</button><span class="cart-info" id="cartInfo">Cart: 0 wells</span><button type="button" class="btn" id="cartClr" disabled>Clear</button><button type="button" class="btn" id="cartDl" disabled>Download CSV</button><span class="cart-msg" id="cartMsg" role="status"></span></div>
+    <div class="cart" aria-label="Data cart"><button type="button" class="btn cart-add" id="cartAdd">Add view to cart</button><span class="cart-info" id="cartInfo">Cart: 0 wells</span><button type="button" class="btn" id="cartClr" disabled>Clear</button><button type="button" class="btn" id="cartDl" disabled>Download CSV</button><button type="button" class="btn" id="pxcDl" disabled title="Downloads the Probe × conc table for the current view">Download probe x conc table</button><span class="cart-msg" id="cartMsg" role="status"></span></div>
     <div class="cart drop" aria-label="To-drop cart"><span class="drop-title">Drop selected wells</span><button type="button" class="btn" id="dropMode" aria-pressed="false">Select to drop</button><span class="cart-info" id="dropInfo">To drop: 0 wells</span><button type="button" class="btn" id="dropHide" aria-pressed="false" disabled>Hide</button><button type="button" class="btn" id="dropClr" disabled>Clear</button><button type="button" class="btn" id="dropDl" disabled title="Adds the wells to drop to 00-drop-folder/to-drop-wells_cummulative.csv">Update drop list</button><span class="cart-msg" id="dropMsg" role="status"></span></div>
   </section>
 
@@ -557,11 +557,11 @@ function pruneZero(R){
   for(const k of Object.keys(R.cols)) R.cols[k]=keep.map(i=>R.cols[k][i]);
   R.n=keep.length;
 }
-const DICT_COLS=['experiment_type','dosing_schedule','dose_type','project_name','Platename','target_spec_name','probe_name','Probe ID','Primary Role','mfi_channel','date','probe_conc'];
+const DICT_COLS=['experiment_type','dosing_schedule','dose_type','project_name','Platename','target_spec_name','probe_name','Probe ID','Primary Role','mfi_channel','date','probe_conc','notes'];
 const EMPTY_RAW={dicts:Object.fromEntries(DICT_COLS.map(k=>[k,[]])), cols:Object.fromEntries([...DICT_COLS,'well','conc','gmfi','gmed','log10','viable','total'].map(k=>[k,[]])), n:0, session:"", download:""};
 let PROJ = "SANA01";
 let GR = []; // wells for the Graph tab (all current filters)
-let XR = []; // wells for the Probe × cell line tab: current filters except cell line
+let XR = []; // (no longer used by the Probe × conc tab, which uses GR)
 let VIEW = []; // well indices currently shown in the heatmap
 const CART = new Map(); // "STUDY:index" -> [study, index]; cleared on page reload
 let RAW = RAWS[PROJ] || EMPTY_RAW, D = RAW.dicts, C = RAW.cols, N = RAW.n;
@@ -863,7 +863,6 @@ function renderFixed(r){
     <div data-pane="wid" ${st.view==="wid"?"":"hidden"}>${wellIdSection(`${hth('Probe','probe','corner')}${hth('Reference','ref','corner2')}${hth('Project name','proj','corner2')}${hth('Dose','dose','corner2')}`, shown, cols, k=>k,
       o=>`<td class="rowlab">${esc(shortProbe(o.probe))}</td><td class="dosecol refcol">${o.ctrl?'<span class="chip">control</span>':""}</td><td class="dosecol">${esc([...o.projects].join(", "))}</td><td class="dosecol">${esc(o.conc)}</td>`,
       (o,k)=>o.cells.get(k), probes).replace('<div class="tscroll"', clToggle+'<div class="tscroll"')}${hPager(probes.length, "")}</div>
-    <div data-pane="pxc" ${st.view==="pxc"?"":"hidden"}>${pxcSection()}</div>
     ${wellsPane()}</div>`;
   main.querySelectorAll("td.cell[data-p]").forEach(td=>{
     td.addEventListener("mouseenter",e=>{ const o=m.get(td.dataset.p), c=o.cells.get(td.dataset.k); const t=td.dataset.k;
@@ -928,7 +927,6 @@ function renderTitrationHM(r){
     <div data-pane="wid" ${st.view==="wid"?"":"hidden"}>${wellIdSection(`${hth('Probe','probe','corner')}${hth('Reference','ref','corner2')}${hth('Project name','proj','corner2')}${hth('Cell line','cl','corner2')}`, shown, doses, d=>d,
       o=>`<td class="rowlab">${esc(o.probe)}</td><td class="dosecol refcol">${o.ctrl?'<span class="chip">control</span>':""}</td><td class="dosecol">${esc([...o.projects].join(", "))}</td><td class="dosecol">${esc(o.target)}</td>`,
       (o,d)=>o.cells.get(d), rowsA).replace('<div class="tscroll"', doseToggle+'<div class="tscroll"')}${hPager(rowsA.length, "")}</div>
-    <div data-pane="pxc" ${st.view==="pxc"?"":"hidden"}>${pxcSection()}</div>
     ${wellsPane()}</div>`;
   main.querySelectorAll("td.cell[data-k]").forEach(td=>{
     td.addEventListener("mouseenter",e=>{ const o=m.get(td.dataset.k), c=o.cells.get(td.dataset.d);
@@ -938,7 +936,7 @@ function renderTitrationHM(r){
 }
 
 /* ---------- heatmap paging (20 rows per page) ---------- */
-const HP=25, XP=20; /* Response table & Plate information: 25 rows; Probe × cell line: 20 */
+const HP=25, XP=20; /* Response table & Plate information: 25 rows; Probe × conc: 20 */
 function hSlice(list){ const pages=Math.max(1,Math.ceil(list.length/HP)); st.hpage=Math.min(st.hpage||0,pages-1); return list.slice(st.hpage*HP,(st.hpage+1)*HP); }
 function hPager(n, info){ const pages=Math.max(1,Math.ceil(n/HP)); const a=n?st.hpage*HP+1:0, b=Math.min(n,(st.hpage+1)*HP);
   return `<div class="pager"><button class="btn" data-hp="prev" ${st.hpage===0?"disabled":""}>Previous</button><span>Rows ${a}–${b} of ${n} · page ${st.hpage+1} of ${pages}</span><button class="btn" data-hp="next" ${st.hpage>=pages-1?"disabled":""}>Next</button>${info?`<span>${info}</span>`:""}</div>`; }
@@ -965,27 +963,37 @@ function viewTabs(){
   const V=[["count","Sample size"],["resp","Response"],["wells","Well-level data"]];
   return `<div class="vtabs" role="tablist">${V.map(([k,l])=>`<button type="button" role="tab" data-view="${k}" aria-selected="${st.view===k}">${l}</button>`).join("")}</div>`;
 }
-/* ---------- Probe × cell line table: number of wells per probe and cell line (current filters, all cell lines) ---------- */
-function pxcSection(){
-  const M=new Map(), T=new Set();
-  const tog=(label,attr,all,hid)=> all.length ? `<div class="nav-row dose-row cl-toggle"><span class="eyebrow">${label}</span><div class="cells">${all.map(k=>`<button type="button" class="cbtn" data-${attr}="${esc(k)}" aria-pressed="${!hid.has(k)}" title="${hid.has(k)?"Show":"Hide"} ${esc(k)}">${esc(k)}</button>`).join("")}${hid.size?`<button type="button" class="btn" data-${attr}="__all__">Show all</button>`:""}${hid.size<all.length?`<button type="button" class="btn" data-${attr}="__none__" data-keys="${esc(JSON.stringify(all))}">Hide all</button>`:""}</div></div>` : "";
-  const tit=st.ds==="titration"; // same buttons as the other tables: titration -> Show doses, fixed dose -> Show cell lines
-  const hidD=tit?(st.hideD||(st.hideD=new Set())):new Set(), hidC=tit?new Set():(st.hideCL||(st.hideCL=new Set()));
-  const allD=[...new Set(facet("hd").map(i=>v("probe_conc",i)))].sort((a,b)=>parseFloat(a)-parseFloat(b));
-  const allC=ALL_TGT.filter(t=>facet("hc").some(i=>v("target_spec_name",i)===t));
-  const toggles=""; // Dose / Cell line are chosen with the buttons at the top
-  for(const i of XR){ if(hidD.has(v("probe_conc",i))) continue; const p=v("probe_name",i), t=v("target_spec_name",i); T.add(t); let o=M.get(p); if(!o){ o={probe:p,n:new Map(),ctrl:false}; M.set(p,o); } if(isCtrl(i)) o.ctrl=true; o.n.set(t,(o.n.get(t)||0)+1); }
-  const cls=ALL_TGT.filter(t=>T.has(t) && !hidC.has(t));
-  const list=[...M.values()].filter(o=>cls.some(t=>o.n.get(t))).sort((a,b)=>a.probe.localeCompare(b.probe,undefined,{numeric:true})); if(st.hsort && st.hsort.k==="probe" && st.hsort.dir==="desc") list.reverse();
-  const allN=list.flatMap(o=>cls.map(t=>o.n.get(t)).filter(Boolean)), mn=allN.length?Math.min(...allN):0, mx=allN.length?Math.max(...allN):0; // color range across the whole table
-  const pages=Math.max(1,Math.ceil(list.length/XP)); st.xpage=Math.min(st.xpage||0,pages-1);
-  const shown=list.slice(st.xpage*XP,(st.xpage+1)*XP), a=list.length?st.xpage*XP+1:0, b=Math.min(list.length,(st.xpage+1)*XP);
-  return `<div class="panel-head"><div><h2>Probe × cell line</h2><p>Number of wells for each probe on each cell line (current filters).</p></div>
-      <div class="scale"><span>${mn}</span><i style="background:linear-gradient(90deg,${COUNT_RAMP.join(",")})"></i><span>${mx}</span></div></div>
-    ${toggles}
-    <div class="tscroll" style="border:0"><table class="hm"><thead><tr>${hth('Probe','probe','corner')}${hth('Reference','ref','corner2')}${cls.map(t=>`<th class="ch">${esc(t)}</th>`).join("")}</tr></thead>
-    <tbody>${shown.map(o=>`<tr><td class="rowlab">${esc(o.probe)}</td><td class="dosecol refcol">${o.ctrl?'<span class="chip">control</span>':""}</td>${cls.map(t=>{ const n=o.n.get(t); if(!n) return `<td class="cell na">·</td>`; const col=countRamp(mx>mn?(n-mn)/(mx-mn):0.5); return `<td class="cell" style="background:${col.bg};color:${col.ink}">${n}</td>`; }).join("")}</tr>`).join("")}</tbody></table></div>
-    <div class="pager"><button class="btn" data-xp="prev" ${st.xpage===0?"disabled":""}>Previous</button><span>Rows ${a}–${b} of ${list.length} · page ${st.xpage+1} of ${pages}</span><button class="btn" data-xp="next" ${st.xpage>=pages-1?"disabled":""}>Next</button></div>`;
+/* ---------- Probe × conc download (no tab): one row per cell line × probe, one column per concentration; each cell is the mean MFI of
+   all wells for that cell line × probe × concentration in the current view (all selected projects and plates pooled), rounded ---------- */
+function pxcData(){
+  const tit=st.ds==="titration", hidD=tit?(st.hideD||new Set()):new Set(), hidC=tit?new Set():(st.hideCL||new Set());
+  const W=GR.filter(i=>!hidD.has(v("probe_conc",i)) && !hidC.has(v("target_spec_name",i)));
+  const concs=[...new Set(W.map(i=>v("probe_conc",i)))].sort((a,b)=>parseFloat(a)-parseFloat(b));
+  const M=new Map();
+  for(const i of W){ const t=v("target_spec_name",i), p=v("probe_name",i), x=val(i); if(x==null||isNaN(x)) continue;
+    const k=t+"@@"+p; let o=M.get(k); if(!o){ o={target:t, probe:p, ctrl:false, cells:new Map()}; M.set(k,o); } if(isCtrl(i)) o.ctrl=true;
+    const d=v("probe_conc",i); let c=o.cells.get(d); if(!c){ c={vals:[],idx:[]}; o.cells.set(d,c); } c.vals.push(x); c.idx.push(i); }
+  const nc=(a,b)=>a.localeCompare(b,undefined,{numeric:true});
+  let list=[...M.values()].sort((a,b)=>clSort(a.target,b.target) || nc(a.probe,b.probe));
+  if(st.hsort && st.hsort.k==="probe" && st.hsort.dir==="desc") list=list.slice().sort((a,b)=>clSort(a.target,b.target) || nc(b.probe,a.probe));
+  const dp=st.metric==="log10"?2:0, rnd=x=>{ const f=10**dp; return Math.round(x*f)/f; };
+  for(const o of list) for(const c of o.cells.values()) c.m=rnd(mean(c.vals));
+  return {list, concs, rnd, dp};
+}
+$("#pxcDl").addEventListener("click",()=>pxcDownload());
+/* Download CSV of the Probe × conc table (all rows), same layout as the example: "target_spec","probe_name","<conc>",... */
+async function pxcDownload(){
+  const {list, concs, dp}=pxcData(), msg=$("#cartMsg");
+  const q=s=>'"'+String(s).replace(/"/g,'""')+'"';
+  const lines=[["target_spec","probe_name",...concs].map(q).join(",")];
+  for(const o of list) lines.push([q(o.target), q(o.probe), ...concs.map(d=>{ const c=o.cells.get(d); return c? (dp?c.m.toFixed(dp):String(Math.round(c.m))) : "NA"; })].join(","));
+  const data=lines.join("\n")+"\n", filename=`${PROJ||"probe"}_probe-x-conc_${new Date().toISOString().slice(0,10)}.csv`;
+  if(window.showSaveFilePicker){
+    try{ const h=await window.showSaveFilePicker({suggestedName:filename, startIn:"downloads", types:[{description:"CSV file", accept:{"text/csv":[".csv"]}}]});
+      const w=await h.createWritable(); await w.write(data); await w.close(); if(msg) msg.textContent=`Saved as ${h.name}`; return; }
+    catch(e){ if(e.name==="AbortError"){ if(msg) msg.textContent="Save cancelled"; return; } } } // other errors: fall back to a normal download
+  try{ if(!DL) throw new Error("no download"); await DL.save({filename, data}); if(msg) msg.textContent="Downloaded"; }
+  catch(e){ if(msg) msg.textContent = e&&e.code==="declined" ? "Download cancelled" : "Download not available"; }
 }
 /* ---------- Graph: dot plot of MFI, one dot per well; x = cell line -> concentration -> antibody ---------- */
 const GP=20; // antibodies per page
@@ -1110,7 +1118,7 @@ function graphSection(){
   return head+pager+`<div class="legend g-legend"><span class="li"><span class="sw" style="background:var(--bar-s);border-radius:2px"></span>Sample</span><span class="li"><span class="sw" style="background:var(--bar-c);border-radius:2px"></span>Control</span><span class="li"><span class="sw" style="background:var(--surface);border:1.5px solid var(--ink)"></span>Well</span>${st.avg?`<span class="li">Error bar = SD (2+ wells)</span>`:""}</div><div class="grow bgrow">${plots}</div>`; /* projects side by side, separated by a vertical line */
 }
 function hmTabs(){
-  const V=[["graph","Response plot"],["resp","Response table"],["wid","Plate information"],["wells","Well-level data"],["pxc","Probe × cell line"],["drop","Drop list"]];
+  const V=[["graph","Response plot"],["resp","Response table"],["wid","Plate information"],["wells","Well-level data"],["drop","Drop list"]];
   if(!V.some(([k])=>k===st.view)) st.view="graph"; const cur=st.view;
   return `<div class="vtabs" role="tablist" aria-label="Heatmap">${V.map(([k,l])=>`<button type="button" role="tab" data-view="${k}" aria-selected="${cur===k}">${l}</button>`).join("")}</div>`;
 }
@@ -1288,7 +1296,7 @@ function renderMain(){
     if(!isAll(st.pj)) x=x.filter(i=>st.pj.includes(v("project_name",i)));
     if(st.plate) x=x.filter(i=>v("Platename",i)===st.plate);
     XR=x; }
-  GR=r;
+  GR=r; { const b=$("#pxcDl"); if(b) b.disabled=!r.length; }
   VIEW=[];
   if(!r.length) $("#main").innerHTML=`<div class="panel empty">No wells match these filters. Clear the probe search or pick another project.</div>`;
   else if(st.ds==="titration") renderTitrationHM(r); else renderFixed(r);
@@ -1347,10 +1355,21 @@ $("#cartDl").addEventListener("click",async()=>{ if(!DL||!CART.size) return;
   catch(e){ if(e.name!=="NotFoundError"&&e.name!=="NoFolder"){ $("#cartMsg").textContent=`Not downloaded: could not read the Drop list (${e.name})`; return; } }
   const dropped=(p,i)=>dropSet.has(String(cartVal(p,i,"Platename")).trim()+"|"+String(cartVal(p,i,"well")).trim());
   const reps=new Map(), repsOf=p=>{ if(!reps.has(p)) reps.set(p,repInfo(p,dropped)); return reps.get(p); };
-  const lines=[[...CART_COLS.map(c=>c[0]),"Replicate","Ave MFI","Date","Time"].map(q).join(",")];
+  // layout of the plate export (e.g. 2026-10-20_pHrodo-…csv), without its "duplicates" column, then Replicate, Ave MFI, Date, Time
+  const rv=(p,i,k)=>{ const R=RAWS[p], x=R&&R.cols[k]?R.cols[k][i]:null; return x==null?"":(R.dicts[k]?R.dicts[k][x]:x); };
+  const EXPR={binding_expr:"binding", intern_expr:"internalization"};
+  const unitOf=(p,i)=>{ const m=String(rv(p,i,"probe_conc")).match(/\(([^)]*)\)\s*$/); return m?m[1].trim():""; };
+  const units=new Set([...CART.values()].filter(([p,i])=>!dropped(p,i)).map(([p,i])=>unitOf(p,i)));
+  const oneUnit=units.size===1?[...units][0]:null;
+  const qs=x=>'"'+String(x??"").replace(/"/g,'""')+'"', qn=x=>x==null||x===""||isNaN(x)?"NA":String(x);
+  const head=["platename","position","expr_type","dose_type","target_spec_name","probe_name",oneUnit?`conc (${oneUnit})`:"conc",...(oneUnit!=null?[]:["conc_unit"]),"mfi","notes"];
+  const lines=[[...head.map(qs),...["Replicate","Ave MFI","Date","Time"].map(qs)].join(",")];
   let nDrop=0;
   for(const [p,i] of CART.values()){ if(dropped(p,i)){ nDrop++; continue; } const ri=repsOf(p).get(i)||{rep:"Rep1",ave:null};
-    lines.push([...CART_COLS.map(c=>q(cartVal(p,i,c[1]))), ri.rep, ri.ave==null?"":ri.ave, date, time].join(",")); }
+    const et=String(rv(p,i,"experiment_type")), mfi=rv(p,i,"gmfi");
+    lines.push([qs(rv(p,i,"Platename")), qs(rv(p,i,"well")), qs(EXPR[et]||et), qs(rv(p,i,"dose_type")), qs(rv(p,i,"target_spec_name")), qs(rv(p,i,"probe_name")),
+      qn(rv(p,i,"conc")), ...(oneUnit!=null?[]:[qs(unitOf(p,i))]), mfi===""?"NA":String(Math.round(mfi)), qs(rv(p,i,"notes")||"NA"),
+      qs(ri.rep), ri.ave==null?"NA":ri.ave, qs(date), qs(time)].join(",")); }
   const filename=`flow-data-cart-${new Date().toISOString().slice(0,10)}.csv`, data=lines.join("\n")+"\n";
   // Chrome / Edge: a "Save as" window opens so you can choose the folder (and file name); other browsers download as usual
   if(window.showSaveFilePicker){
@@ -1609,7 +1628,7 @@ const uniq = a => [...new Set(a)];
 
 /* well-level columns the portal needs (one entry per CSV row) */
 const WELL_COLS = ["experiment_type","dosing_schedule","dose_type","Platename","target_spec_name","probe_name","Probe ID","Primary Role",
-  "mfi_channel","DATE","probe_conc","Plate Position","Probe Quant Value","gMFI","gMFI_med","Log10 MFI","/intact/singlet/viable","Result"];
+  "mfi_channel","DATE","probe_conc","Plate Position","Probe Quant Value","gMFI","gMFI_med","Log10 MFI","/intact/singlet/viable","Result","notes"];
 
 /* ---------- one summary row per file (mirrors the R loop) + its wells ---------- */
 function summarise(text, relPath, file){
@@ -1775,7 +1794,7 @@ $("#selAllBtn").addEventListener("click",()=>{ for(const o of view()) SELECTED.a
 $("#selClrBtn").addEventListener("click",()=>{ SELECTED.clear(); saveSel(); render(); });
 
 /* ---------- build the study data (same layout the portal used for its SANA01 / SANA03 / SANA04 files) ---------- */
-const DICT_COLS=['experiment_type','dosing_schedule','dose_type','project_name','Platename','target_spec_name','probe_name','Probe ID','Primary Role','mfi_channel','date','probe_conc'];
+const DICT_COLS=['experiment_type','dosing_schedule','dose_type','project_name','Platename','target_spec_name','probe_name','Probe ID','Primary Role','mfi_channel','date','probe_conc','notes'];
 const MON={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
 function isoDate(x){ x=String(x??"").trim(); let m;
   if((m=x.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))) return `${m[1]}-${m[2].padStart(2,"0")}-${m[3].padStart(2,"0")}`;
