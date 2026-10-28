@@ -21,14 +21,6 @@
             <button class="collapse navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <div class="navbar-collapse" id="navbarNavAltMarkup">
-                <div class="navbar-nav">
-                  <a class="nav-link" href="">Related SOPs</a>
-                </div>
-            </div>
-            <div class="d-flex navbar-nav">
-                <a class="nav-link" href="">Help</a>
-            </div>
         </div>
     </nav>
     <!--Navigation bar-->
@@ -42,22 +34,8 @@
 
     <div class="container">
     <p class="fst-normal">Welcome to the Sanavia Data Ingestion Portal. 
-                          From here, you can transfer your experiment data 
-                          results and received genscript orders efficiently
-                          and securely to AWS and Benchling account.
-                          There are four modules available for use, and each 
-                          module has a specific function.
-                          The Experiment Data Transfer QC module QCs the required 
-                          experiment metadata (i.e. the plate information sheets) to make 
-                          sure it is complete and accurate before 
-                          allowing you to transfer your experiment results.
-                          Second, the Flow Cytometry Data Analysis module allows you to 
-                          gate your flow cytometry data.
-                          Third, the Genscript Order module reads in received genscript 
-                          order excel files and tranforms them into a format that can be uploaded 
-                          to Benchling.
-                          Finally, the Upload Data module allows you to upload your data 
-                          to AWS and Benchling securely.
+                          These are local apps on your computer. Data used
+                          by these apps are backed up and stored on AWS.
                         </p>
 
 </div>
@@ -65,6 +43,9 @@
 <div class="container">
 
     <h1 class="display-6 fw-lighter">Select a module</h1>
+    <p>Note: Here is a link (<a href="http://127.0.0.1:3004">original TLGs app</a>)
+    to the original TLGs app (to be discontinued soon).</p>
+    
     <!--row-->
     <div class="row g-3" id="portal-cards">
 
@@ -114,17 +95,6 @@
           </div>
         </div>
         
-        <div class="col-12 col-md-6 col-lg-3">
-          <div class="card h-100">
-            <img src="static/img/header-v12.jpg" class="card-img-top"/>
-            <div class="card-body">
-              <h5 class="card-title text-white">Tables Listings & Graphs</h5>
-              <p class="card-text text-white">Original version - to be discontinued</p>
-              <a href="http://127.0.0.1:3004" class="btn btn-outline-light stretched-link"> (Old version) TLGs</a>
-            </div>
-          </div>
-        </div>
-        
     </div>
     <!--row-->  
 </div>
@@ -138,11 +108,13 @@
                 <div class="row">
                     <h5 class="text-dark">Portal Links</h5>
                     <p>
-                      <a class="link-secondary link-offset-2 link-offset-3-hover link-underline link-underline-opacity-0 link-underline-opacity-50-hover" href="">Data Mart</a>
+                      <a class="link-secondary link-offset-2 link-offset-3-hover link-underline link-underline-opacity-0 link-underline-opacity-50-hover" href="http://127.0.0.1:3001">Experiment Data Transfer QC</a>
                       |&nbsp;
-                      <a class="link-secondary link-offset-2 link-offset-3-hover link-underline link-underline-opacity-0 link-underline-opacity-50-hover" href="">Antibody Space Explorer</a>
+                      <a class="link-secondary link-offset-2 link-offset-3-hover link-underline link-underline-opacity-0 link-underline-opacity-50-hover" href="http://127.0.0.1:3002">Flow cytometry gating</a>
                       |&nbsp;
-                      <a class="link-secondary link-offset-2 link-offset-3-hover link-underline link-underline-opacity-0 link-underline-opacity-50-hover" href="">Sequence Analysis</a>
+                      <a class="link-secondary link-offset-2 link-offset-3-hover link-underline link-underline-opacity-0 link-underline-opacity-50-hover" href="http://127.0.0.1:3003">Upload your data</a>
+                      |&nbsp;
+                      <a class="link-secondary link-offset-2 link-offset-3-hover link-underline link-underline-opacity-0 link-underline-opacity-50-hover" href="tlgs-app-html/sanavia-flow-portal-local.html">TLGs here</a>
                     </p>
                 </div>
             </div>
