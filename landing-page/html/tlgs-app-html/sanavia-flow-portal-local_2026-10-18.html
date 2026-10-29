@@ -1,0 +1,1867 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sanavia Flow Cytometry Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: instrument-console app — header, experiment/dosing tabs, one filter row, then a chart panel over its data table. */
+:root{
+  --bg:#f3f5f7; --surface:#fcfcfd; --raise:#eef1f4; --band:#e6ebf1; --bar-s:#d3e9fb; --bar-c:#f0a99b; --wa:#d3e5fa; --wb:#d6f1ee; --wa2:#b8d4f6; --wb2:#b8e5e0; --hov:#dcf2e1; --ink:#0f1720; --ink-2:#465160; --ink-3:#6f7a88; --line:#dce1e7;
+  --accent:#1f4e8c; --accent-soft:#dde7f5; --btn-bg:#e6eefa; --btn-line:#bcd0ee; --on-accent:#ffffff;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300; --s7:#6250d6; --s8:#e34948;
+  --ref:#8a5a00; --ref-soft:#fbefd6;
+  --f-display:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#101316; --surface:#171b1f; --raise:#1f252a; --band:#22292f; --bar-s:#8fbde3; --bar-c:#c98576; --wa:#1e3352; --wb:#173b3a; --wa2:#2b4870; --wb2:#225552; --hov:#1e3526; --ink:#e9ecef; --ink-2:#adb5bf; --ink-3:#848d98; --line:#2b3238;
+  --accent:#8ab4f0; --accent-soft:#1b2a42; --on-accent:#0b1424; --btn-bg:#1a2740; --btn-line:#2c4166;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
+  --ref:#f0c46a; --ref-soft:#3a2e14; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#101316; --surface:#171b1f; --raise:#1f252a; --band:#22292f; --bar-s:#8fbde3; --bar-c:#c98576; --wa:#1e3352; --wb:#173b3a; --wa2:#2b4870; --wb2:#225552; --hov:#1e3526; --ink:#e9ecef; --ink-2:#adb5bf; --ink-3:#848d98; --line:#2b3238;
+  --accent:#8ab4f0; --accent-soft:#1b2a42; --on-accent:#0b1424; --btn-bg:#1a2740; --btn-line:#2c4166;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
+  --ref:#f0c46a; --ref-soft:#3a2e14; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45}
+.wrap{max-width:1240px;margin:0 auto;padding-inline:20px;padding-block:20px 48px;display:flex;flex-direction:column;gap:18px}
+@media (max-width:520px){.wrap{padding-inline:16px}}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 24px}
+h1{font-family:var(--f-display);font-weight:700;font-size:1.65rem;letter-spacing:-.01em;margin:0;text-wrap:balance}
+h1 span{color:var(--accent)}
+.meta{font-family:var(--f-mono);font-size:.75rem;color:var(--ink-3);display:flex;flex-wrap:wrap;gap:4px 14px}
+header{flex-direction:column;align-items:stretch;gap:6px}
+.title-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.theme-btn{font:inherit;font-size:.82rem;display:flex;align-items:center;gap:6px;white-space:nowrap;cursor:pointer;border:1px solid var(--line);background:var(--raise);color:var(--ink-2);padding:6px 12px;border-radius:6px}
+.theme-btn:hover{border-color:var(--ink-3);color:var(--ink)}
+.theme-btn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.eyebrow{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3);font-weight:600}
+
+/* tabs */
+.nav{display:flex;flex-direction:column;gap:10px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px}
+.tab{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--ink-2);padding:8px 14px;border-radius:6px;display:flex;align-items:baseline;gap:8px;font-weight:500}
+.tab small{font-family:var(--f-mono);font-size:.72rem;color:var(--ink-3)}
+.tab:hover{border-color:var(--accent)}
+.tab[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.tab[aria-selected="true"] small{color:var(--on-accent);opacity:.8}
+.tab{min-width:10.5rem;justify-content:center;padding:6px 12px;font-size:.88rem}
+.tab small{font-size:.68rem}
+@media (max-width:520px){.tab{min-width:0;flex:1 1 0}}
+.tabs.sub .tab{background:transparent}
+.tabs.sub .tab[aria-selected="true"]{background:var(--accent-soft);color:var(--ink);border-color:var(--accent)}
+.tabs.sub .tab[aria-selected="true"] small{color:var(--ink-2)}
+.nav-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.nav-row .eyebrow{width:118px}
+.nav-row.dose-row .eyebrow{width:auto}
+.wfilters{display:flex;flex-wrap:wrap;gap:10px 14px;margin:4px 0 12px}
+.wfilters select{max-width:320px}
+.stack{display:grid;gap:24px;min-width:0}
+.stack>.nav-row{margin-bottom:-8px}
+.bx-ax{fill:var(--ink-3);font-family:var(--f-mono);font-size:10.5px}
+.bx-title{fill:var(--ink-2);font-size:11px}
+.bx-cl{fill:var(--ink);font-size:12px;font-weight:600}
+.bx-lab{fill:var(--ink-2);font-size:11px;font-family:var(--f-mono)}
+.lp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.lp{border:1px solid var(--line);border-radius:6px;padding:10px;min-width:0}
+.lp svg{width:100%;height:auto;display:block}
+.lp-h{font-weight:600;font-size:.88rem;margin-bottom:4px}
+.lp-h span{font-weight:400;color:var(--ink-3);font-family:var(--f-mono);font-size:.74rem;margin-left:6px}
+h1 span.pn{color:var(--ink)}
+.cover{padding-block:56px 64px;gap:36px}
+.cover-head{gap:10px}
+.cover-title{font-size:clamp(2rem,5vw,3.1rem);line-height:1.08;letter-spacing:-.02em}
+.cover-sub{margin:0;color:var(--ink-2);font-size:1rem;max-width:62ch}
+.studies{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}
+.study{font:inherit;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:6px;padding:26px 24px;border-radius:12px;border:2px solid var(--btn-line);background:var(--surface);color:var(--ink);min-height:190px}
+.study:hover{border-color:var(--accent);background:var(--btn-bg)}
+.study-name{font-family:var(--f-display);font-size:2rem;font-weight:700;letter-spacing:-.01em}
+.study-n{font-family:var(--f-mono);font-size:.85rem;color:var(--ink-2)}
+.study-et{font-size:.85rem;color:var(--ink-3)}
+.study-go{margin-top:auto;font-weight:600;color:var(--accent)}
+.back-btn{font:inherit;font-size:.85rem;font-weight:600;cursor:pointer;border:1px solid var(--line);background:var(--raise);color:var(--ink-2);padding:6px 12px;border-radius:6px}
+.back-btn:hover{color:var(--ink);border-color:var(--ink-3)}
+.projsel{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.projbtn{font:inherit;font-family:var(--f-display);font-size:1.35rem;font-weight:700;letter-spacing:.01em;cursor:pointer;padding:18px 16px;border-radius:10px;border:2px solid var(--btn-line);background:var(--btn-bg);color:var(--ink);display:flex;flex-direction:column;align-items:center;gap:4px}
+.projbtn small{font-family:var(--f-mono);font-size:.74rem;font-weight:400;color:var(--ink-3)}
+.projbtn:hover{border-color:var(--accent)}
+.projbtn[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.projbtn[aria-selected="true"] small{color:var(--on-accent);opacity:.85}
+@media (max-width:520px){.projbtn{font-size:1.05rem;padding:12px 8px}}
+.vtabs{display:flex;gap:4px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.vtabs button{font:inherit;font-size:.92rem;font-weight:600;background:transparent;border:0;border-bottom:2px solid transparent;color:var(--ink-2);padding:8px 14px;margin-bottom:-1px;cursor:pointer}
+.vtabs button:hover{color:var(--ink)}
+.vtabs button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+.cells{display:flex;flex-wrap:wrap;gap:6px;min-width:0;flex:1}
+.cbtn{font:inherit;font-size:.84rem;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--ink-2);padding:4px 12px;border-radius:999px}
+.cbtn:hover{border-color:var(--accent);color:var(--ink)}
+.tab:not(:disabled):not([aria-selected="true"]),.cbtn:not(:disabled):not([aria-pressed="true"]){background:var(--btn-bg);border-color:var(--btn-line);color:var(--ink)}
+.tabs.sub .tab[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.tabs.sub .tab[aria-selected="true"] small{color:var(--on-accent);opacity:.8}
+.cbtn:disabled,.tab:disabled{opacity:.4;cursor:default;border-style:dashed}
+.cbtn:disabled:hover,.tab:disabled:hover{border-color:var(--line);color:var(--ink-2)}
+.cbtn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
+@media (max-width:520px){.nav-row .eyebrow{width:100%}}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+
+/* project cards (stacked, left column) */
+#studyView{max-width:1560px}
+.study-grid{display:grid;grid-template-columns:290px minmax(0,1fr);gap:20px;align-items:start}
+.study-body{display:flex;flex-direction:column;gap:18px;min-width:0}
+.projside{position:sticky;top:12px;max-height:calc(100vh - 24px);display:flex;flex-direction:column;gap:8px}
+.projside .eyebrow{font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);font-weight:600}
+.pcards{display:flex;flex-direction:column;gap:10px;overflow:auto;padding:2px 4px 2px 2px}
+.pcard{all:unset;box-sizing:border-box;display:block;cursor:pointer;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px 12px 16px;position:relative}
+.pcard:hover{border-color:var(--ink-3)}
+.pcard[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 4px 0 0 var(--accent)}
+.pcard:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.pcard b{display:block;font-size:.92rem;font-weight:650;color:var(--ink);line-height:1.3;word-break:break-word}
+.pcard span{display:block;margin-top:5px;font-size:.78rem;color:var(--ink-2);line-height:1.45}
+@media (max-width:860px){.study-grid{grid-template-columns:minmax(0,1fr)}.projside{position:static;max-height:none}.pcards{flex-direction:row;overflow-x:auto}.pcard{min-width:240px}}
+.hm-right{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.avg-btn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.avg-btn[aria-pressed="true"]:hover{color:#e3e7ec!important}
+/* graph */
+.wells-below{padding-top:18px;margin-top:18px;border-top:1px solid var(--line)}
+.resp-plot{padding-bottom:18px;margin-bottom:18px;border-bottom:1px solid var(--line)}
+.resp-plot.below{padding:18px 0 0;margin:18px 0 0;border-bottom:0;border-top:1px solid var(--line)}
+.gplot{display:block;font-family:var(--f-mono)}
+.gplot .g-grid{stroke:var(--line);stroke-width:1}
+.gplot .g-vline{stroke:var(--ink-3);stroke-width:1;stroke-dasharray:1.5 3;opacity:.45}
+.gplot .g-tick{font-size:10px;fill:var(--ink-3)}
+.gplot .g-title{font-size:11px;fill:var(--ink-2);font-family:var(--f-body,inherit)}
+.gplot .g-lab{font-size:9.5px;fill:var(--ink-2)}
+.gplot .g-conc{font-size:10px;fill:var(--ink-2)}
+.gplot .g-cl{font-size:11.5px;font-weight:600;fill:var(--ink)}
+.gplot .g-brk{stroke:var(--ink-3);stroke-width:1}
+.gplot .g-brk2{stroke:var(--ink);stroke-width:1.5}
+.gplot .g-band{fill:var(--raise);opacity:.6}
+.gplot .g-dot{fill:var(--s1);stroke:var(--surface);stroke-width:1.5;fill-opacity:.85;cursor:default}
+.gplot .g-dot.ref{fill:var(--s2)}
+.gplot .g-bar{fill:var(--bar-s);stroke:none}
+.gplot .g-bar.ctrl{fill:var(--bar-c)}
+.gplot .g-bar:hover{filter:brightness(1.08)}
+.gplot .g-err{stroke:var(--ink);stroke-width:1.2}
+.gplot .g-wdot{fill:var(--surface);stroke:var(--ink);stroke-width:1.2}
+.gplot .g-dot.rep{fill:var(--ink-3);fill-opacity:.55;stroke-width:1}
+.gplot .g-dot:hover{stroke:var(--ink);stroke-width:2}
+.gscale button{padding:4px 12px}
+.g-legend{margin:6px 0 4px}
+.lp-row{display:flex;gap:10px;flex-wrap:nowrap}
+.lp-grp{margin:0 0 14px}.lp-grp .lp-row{overflow-x:auto}.lp-grp .g-legend{margin:2px 0 4px}
+.lp-gn{font-size:.74rem;color:var(--ink-3);margin:6px 0 0}
+.lp-panel{flex:none}
+.lp-cl{font-family:var(--f-mono);font-size:.78rem;font-weight:600;color:var(--ink);margin:2px 0 0 58px}
+.gplot .lp-line{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round;opacity:.9}
+.gplot .lp-line.ctrl{stroke-dasharray:5 3}
+.gplot .lp-line:hover{stroke-width:3.5;opacity:1}
+.gplot .lp-pt{stroke:var(--surface);stroke-width:1.5}
+.grow{display:flex;flex-wrap:nowrap;gap:0;overflow-x:auto;align-items:flex-start;margin-top:8px;padding-bottom:6px}
+.gproj{flex:none;padding:0 14px;border-left:1px solid var(--line)}
+.gproj:first-child{border-left:0;padding-left:0}
+.lgrow .gproj{border-left:0;padding:0 0 26px;margin:0 0 26px;border-bottom:2px solid var(--ink-3)} /* titration: divider + spacing between projects */
+.lgrow .gproj:last-child{margin-bottom:0}
+.bgrow .gproj{padding:0 22px;border-left:2px solid color-mix(in srgb, var(--ink-3) 50%, transparent)}.bgrow .gproj:first-child{padding-left:0;border-left:0}
+.gproj-h{margin:0 0 4px;font-size:.86rem;font-weight:600;color:var(--ink);font-family:var(--f-mono)}
+/* upload page */
+.cover-actions{display:flex;gap:10px;flex-wrap:wrap}
+.back-btn.danger{color:#c2502e;border-color:#e3b2a3}
+.back-btn.danger:hover{border-color:#c2502e;color:#c2502e}
+.up-drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:180px;border:2px dashed var(--btn-line);border-radius:14px;background:var(--surface);cursor:pointer;text-align:center;padding:24px}
+.up-drop:hover,.up-drop.over{border-color:var(--accent);background:var(--btn-bg)}
+.up-drop input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.up-drop:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.up-big{font-family:var(--f-display);font-size:1.25rem;font-weight:600;color:var(--ink)}
+.up-small{font-size:.86rem;color:var(--ink-3)}
+.up-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.up-item{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.up-item.bad{border-color:#d96b4a}
+.up-name{font-family:var(--f-mono);font-size:.84rem;color:var(--ink);word-break:break-all;flex:1 1 280px}
+.up-info{font-size:.82rem;color:var(--ink-2)}
+.up-item.bad .up-info{color:#c2502e}
+.up-go{font:inherit;font-weight:600;font-size:1rem;padding:12px 22px;border-radius:10px;border:0;background:var(--accent);color:var(--on-accent);cursor:pointer}
+.up-go:disabled{opacity:.45;cursor:default}
+.up-go:not(:disabled):hover{filter:brightness(1.08)}
+/* to-drop cart */
+.cart.drop{margin-left:0;flex:1 1 100%;order:2}
+.drop-title{flex:1 1 100%;font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);font-weight:600;margin-bottom:-2px}
+#dropMode[aria-pressed="true"]{background:#c2502e;border-color:#c2502e;color:#fff;font-weight:600}
+#dropMode[aria-pressed="true"]:hover{color:#f3e3dc!important}
+body.drop-mode #main svg.gplot [data-i], body.drop-mode #main svg.gplot [data-ag], body.drop-mode #main tbody tr[data-w]{cursor:crosshair}
+body.drop-mode #main tbody tr[data-w]:hover td.rowlab{box-shadow:inset 3px 0 0 #c2502e}
+body.drop-mode #main td[data-wi]{cursor:crosshair}
+.hm td.cell.dropped{box-shadow:inset 0 0 0 2px #d1342b}
+.hm td.cell.dropped-all{text-decoration:line-through;text-decoration-color:#d1342b}
+.gplot .dropped{stroke:#d1342b!important;stroke-width:2.5!important}
+.gplot circle.dropped{fill:#fde2dd!important}
+.hm tbody tr.dropped td.rowlab{box-shadow:inset 4px 0 0 #d1342b}
+.hm tbody tr.dropped-all td.rowlab, .hm tbody tr.dropped-all td.dosecol{text-decoration:line-through;text-decoration-color:#d1342b;color:var(--ink-3)}
+/* data cart */
+.cart{margin-left:auto;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding-bottom:2px}
+.cart .cart-add{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
+.cart .cart-add:hover:not(:disabled){color:#e3e7ec!important}
+.cart .btn:disabled{opacity:.5;cursor:default}
+.cart-info{font-size:.82rem;color:var(--ink-2);font-family:var(--f-mono)}
+.cart-msg{font-size:.78rem;color:var(--ink-3)}
+/* filters */
+.filters{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;padding-block:12px;border-block:1px solid var(--line)}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label{font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);font-weight:600}
+select,input[type=search]{font:inherit;font-size:.88rem;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:6px 8px;max-width:100%}
+select{max-width:280px}
+input[type=search]{width:280px}
+.check{display:flex;align-items:center;gap:6px;font-size:.86rem;color:var(--ink-2);padding-bottom:6px;cursor:pointer}
+.seg{display:flex;border:1px solid var(--line);border-radius:5px;overflow:hidden}
+.seg button{font:inherit;font-size:.82rem;border:0;background:var(--surface);color:var(--ink-2);padding:6px 10px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--ink);font-weight:600}
+
+/* kpis */
+.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.kpi{background:var(--surface);padding:10px 14px;display:flex;flex-direction:column;gap:2px}
+.kpi b{font-family:var(--f-mono);font-weight:500;font-size:1.25rem;font-variant-numeric:tabular-nums}
+.kpi span{font-size:.72rem;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em}
+@media (max-width:700px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.kpi:last-child{grid-column:span 2}}
+
+/* panels */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.panel-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px 16px}
+.panel-head h2{font-family:var(--f-display);font-size:1.05rem;font-weight:600;margin:0}
+.panel-head p{margin:0;color:var(--ink-3);font-size:.82rem;max-width:70ch}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.8rem;color:var(--ink-2)}
+.legend .li{display:flex;align-items:center;gap:6px}
+.sw{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}
+.chart{width:100%;min-width:0;position:relative}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.axis text{fill:var(--ink-3);font-family:var(--f-mono);font-size:10.5px}
+.axis-title{fill:var(--ink-2);font-size:11px;font-family:var(--f-body)}
+.grid line{stroke:var(--line);stroke-width:1}
+.empty{padding:36px 12px;text-align:center;color:var(--ink-3)}
+.note{font-size:.78rem;color:var(--ink-3);margin:0}
+.btn{font:inherit;font-size:.82rem;border:1px solid var(--line);background:var(--surface);color:var(--ink-2);padding:5px 10px;border-radius:5px;cursor:pointer}
+.btn:hover{border-color:var(--accent);color:var(--ink)}
+
+/* tables */
+.tscroll{overflow-x:auto;min-width:0;border:1px solid var(--line);border-radius:6px}
+table{border-collapse:collapse;width:100%;font-size:.82rem}
+th,td{padding:6px 10px;text-align:left;white-space:nowrap;border-bottom:1px solid var(--line)}
+th{position:sticky;top:0;background:var(--raise);font-weight:600;color:var(--ink-2);font-size:.74rem;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;user-select:none}
+th.nosort{cursor:default}
+th[data-dir="asc"]::after{content:" ▲";font-size:.6rem}
+th[data-dir="desc"]::after{content:" ▼";font-size:.6rem}
+td.num,th.num{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+td.mono{font-family:var(--f-mono);font-size:.78rem}
+td.trunc{max-width:240px;overflow:hidden;text-overflow:ellipsis}
+tbody tr:hover{background:var(--raise)}
+tr.sel td{background:var(--accent-soft)}
+.chip{display:inline-block;font-size:.66rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;padding:1px 6px;border-radius:3px;background:var(--ref-soft);color:var(--ref);margin-left:6px;vertical-align:1px}
+.pager{display:flex;align-items:center;gap:10px;font-size:.82rem;color:var(--ink-3);flex-wrap:wrap}
+
+/* heatmap */
+.hm{border-collapse:separate;border-spacing:2px;width:auto}
+.hm th,.hm td{border:0}
+.hm thead th{background:transparent;text-transform:none;letter-spacing:0;font-size:.76rem;color:var(--ink-2);cursor:default;text-align:center;vertical-align:bottom;padding:4px 6px;white-space:normal;min-width:84px}
+.hm thead th small{display:block;font-family:var(--f-mono);font-weight:400;color:var(--ink-3)}
+.hm td.rowlab{font-size:.8rem;padding-right:12px;position:sticky;left:0;background:var(--surface)}
+.hm td.rowlab.band,.hm td.dosecol.band{background:var(--band)}
+.hm tbody tr:hover td.rowlab,.hm tbody tr:hover td.dosecol{background:var(--hov)}
+.hm td.cell{text-align:center;font-family:var(--f-mono);font-size:.74rem;font-variant-numeric:tabular-nums;border-radius:3px;min-width:84px;padding:5px 6px;cursor:default}
+.hm thead th{background:transparent;cursor:default;color:var(--ink-2);font-size:.74rem;text-transform:uppercase;letter-spacing:.05em}
+.hm thead th.corner{text-align:left;vertical-align:bottom;min-width:110px;position:sticky;left:0;background:var(--surface);z-index:1}
+.hm thead th.ch{position:static;text-align:center;vertical-align:bottom;min-width:84px;text-transform:none;letter-spacing:0;font-size:.76rem}
+.hm td.refcol{padding:0 12px 0 4px}
+.hm td.refcol .chip{margin-left:0}
+.hm td.dosecol{font-family:var(--f-mono);font-size:.74rem;color:var(--ink-2);padding:0 12px 0 4px;white-space:nowrap}
+.hm thead th.corner2{position:static;text-align:left;vertical-align:bottom;padding:4px 12px 4px 4px}
+.hm td.rowlab .rc{font-family:var(--f-mono);color:var(--ink-3);font-size:.7rem}
+.hm thead th.ph{position:static;min-width:0;padding:4px 2px;vertical-align:bottom;text-transform:none;letter-spacing:0}
+.hm thead th.ph span{writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;display:inline-block;font-family:var(--f-mono);font-weight:400;font-size:.74rem}
+.hm td.rowlab small{display:block;font-family:var(--f-mono);color:var(--ink-3);font-size:.7rem}
+.hm td.cell{min-width:64px}
+.hm tbody td{padding-top:2px;padding-bottom:2px}
+.hm tbody td.cell{padding:3px 6px}
+.hm td.na{background:var(--raise);color:var(--ink-3)}
+.scale{display:flex;align-items:center;gap:8px;font-family:var(--f-mono);font-size:.72rem;color:var(--ink-3)}
+.scale i{display:block;width:160px;height:10px;border-radius:2px}
+
+details.wells summary{cursor:pointer;font-family:var(--f-display);font-weight:600;font-size:1rem}
+details.wells[open] summary{margin-bottom:12px}
+
+#tip{max-width:380px!important;position:fixed;pointer-events:none;z-index:20;background:var(--ink);color:var(--bg);font-size:.78rem;padding:8px 10px;border-radius:6px;max-width:280px;line-height:1.4;box-shadow:0 4px 16px rgba(0,0,0,.2)}
+#tip b{font-weight:600}
+#tip .k{opacity:.7}
+@media (prefers-reduced-motion:no-preference){.tab,.btn{transition:border-color .12s,background .12s}}
+:root{--accent:#0b1590; --accent-soft:#e4e6f6; --btn-bg:#eceefa; --btn-line:#c6cbee; --on-accent:#ffffff; --navy:#000b8c; --navy-2:#06106e; --cream:#f6f1e8; --cream-2:#d6d1c4; --salmon:#d98080; --f-display:"Lexend","Helvetica Neue",Arial,sans-serif;}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--accent:#a9b0ff; --accent-soft:#1c1f45; --btn-bg:#171a38; --btn-line:#2d3268; --on-accent:#0a0c26; --navy:#070d5e; --navy-2:#050a45; --cream:#1b1d22; --cream-2:#15171b; --salmon:#e79a9a;}}
+:root[data-theme="dark"]{--accent:#a9b0ff; --accent-soft:#1c1f45; --btn-bg:#171a38; --btn-line:#2d3268; --on-accent:#0a0c26; --navy:#070d5e; --navy-2:#050a45; --cream:#1b1d22; --cream-2:#15171b; --salmon:#e79a9a;}
+html,body{overflow-x:clip}
+body{display:flex;flex-direction:column;min-height:100vh}
+body>.site-foot{margin-top:auto}
+.bar-theme{margin-left:auto}
+body>.wrap{width:100%}
+@media (max-width:560px){.topbar nav,.topbar .crumb{display:none!important}.topbar-in{gap:12px}}
+.cover-head .theme-btn,#studyView header .theme-btn{display:none}
+h1 span.pn{color:var(--ink)}
+
+/* ===== Portal chrome with Studio cover ===== */
+/* ===== Version A · Portal: navy bar, light hero band, cream footer ===== */
+.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:#2a2996;color:#f6f1e8}
+.topbar-in{max-width:1240px;margin:0 auto;padding:8px 20px;display:flex;align-items:center;gap:22px}
+.topbar img{height:33px;width:auto;display:block}
+.topbar nav{display:flex;gap:18px;font-size:.88rem;flex:1;min-width:0}
+.topbar nav span{opacity:.75}
+.topbar nav b{font-weight:400;font-family:var(--f-display);font-size:1.35rem;letter-spacing:.01em}
+.topbar nav{align-items:center}
+.bar-theme{padding:3px 9px!important;font-size:.72rem!important;gap:5px!important;background:transparent!important;border:1px solid rgba(246,241,232,.45)!important;color:#f6f1e8!important}
+.bar-theme svg{width:12px!important;height:12px!important}
+.bar-theme:hover{border-color:#f6f1e8!important}
+h1{font-family:var(--f-display);font-weight:400}
+#studyView{padding-top:22px}
+.site-foot{margin-top:40px;text-align:center;font-size:.85rem}
+.site-foot .f1{background:#f6f1e8;color:#3d3a33;padding:18px 16px}
+.site-foot .f1 h5{margin:0 0 6px;font-family:var(--f-display);font-weight:500;font-size:1rem;color:#1d1b17}
+.site-foot .f2{background:#d6d1c4;color:#4d493f;padding:10px 16px}
+.cover{padding-block:48px 56px}
+.cover-head>.title-row{display:none}
+.cover .eyebrow{color:var(--salmon)}
+.cover-title{font-family:var(--f-display);font-weight:600;font-size:clamp(2.4rem,6vw,4rem);line-height:1.02;letter-spacing:-.025em;color:var(--accent);margin:0}
+.cover-title em{font-style:normal;font-weight:300;color:var(--ink-2)}
+.cover-sub{font-size:1.02rem}
+.studies{grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.study{position:relative;overflow:hidden;background:var(--navy);border:0;color:#f6f1e8;border-radius:14px;padding:28px 26px;min-height:220px}
+.study::after{content:"";position:absolute;right:-26px;bottom:-30px;width:150px;height:155px;background:url(data:image/png;base64,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) no-repeat center/contain;opacity:.09;transition:opacity .2s,transform .2s}
+.study:hover{background:var(--navy-2);border:0}
+.study:hover::after{opacity:.16;transform:rotate(-4deg)}
+.study-name{font-family:var(--f-display);font-weight:500;font-size:2.3rem;color:#fff;letter-spacing:.01em}
+.study-n{color:rgba(246,241,232,.85)}
+.study-et{color:rgba(246,241,232,.65)}
+.study-go{color:#f4b2b2;position:relative;z-index:1}
+
+.study-n{font-size:.93rem}
+.study-et{font-size:.93rem}
+.study-go{font-size:1rem}
+
+/* all buttons: slate-blue selected, white unselected with light grey border (user reference) */
+:root{--sel:#3a5c86; --btn-bg:#ffffff; --btn-line:#e0e3e9}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--sel:#5577a6; --btn-bg:#1d2127; --btn-line:#343a44}}
+:root[data-theme="dark"]{--sel:#5577a6; --btn-bg:#1d2127; --btn-line:#343a44}
+.tab[aria-selected="true"],.tabs.sub .tab[aria-selected="true"],.cbtn[aria-pressed="true"]{background:var(--sel)!important;border-color:var(--sel)!important;color:#fff!important;font-weight:600}
+.tab[aria-selected="true"] small,.tabs.sub .tab[aria-selected="true"] small{color:#fff!important;opacity:.85}
+.tab:not(:disabled):not([aria-selected="true"]),.cbtn:not(:disabled):not([aria-pressed="true"]){background:var(--btn-bg)!important;border-color:var(--btn-line)!important;color:var(--ink)!important}
+.tab:not(:disabled):not([aria-selected="true"]):hover,.cbtn:not(:disabled):not([aria-pressed="true"]):hover{border-color:var(--sel)!important}
+.btn,.back-btn{background:var(--btn-bg);border-color:var(--btn-line);color:var(--ink)}
+.btn:hover,.back-btn:hover{border-color:var(--sel)}
+.vtabs button[aria-selected="true"]{color:var(--sel);border-bottom-color:var(--sel)}
+
+/* experiment type + dosing schedule buttons: identical fixed width so the two rows always line up */
+#tabsEt .tab,#tabsDs .tab{width:13rem;min-width:13rem;max-width:13rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:520px){#tabsEt,#tabsDs{display:grid;grid-template-columns:1fr 1fr;width:100%}#tabsEt .tab,#tabsDs .tab{width:auto;min-width:0;max-width:none}}
+
+
+/* all buttons: between original and smallest */
+.cbtn{padding:3.5px 11px!important;font-size:.82rem!important}
+.tab{padding:5px 11px!important;font-size:.86rem!important}
+.tab small{font-size:.66rem!important}
+#tabsEt .tab,#tabsDs .tab{width:12.5rem;min-width:12.5rem;max-width:12.5rem}
+.btn{padding:4px 10px;font-size:.8rem}
+.back-btn{padding:5px 11px;font-size:.82rem}
+.vtabs button{padding:7px 13px;font-size:.9rem}
+@media (max-width:520px){#tabsEt .tab,#tabsDs .tab{width:auto;min-width:0;max-width:none}}
+
+#studyView h1 span:not(.pn){color:var(--ink-3)}
+
+.hm th.hs{cursor:pointer;user-select:none}
+.hm th.hs:hover{color:var(--ink)}
+.hm th.hs.on{color:var(--accent)}
+.hm th.hs.on[data-dir="asc"]::after{content:" ▲";font-size:.6rem}
+.hm th.hs.on[data-dir="desc"]::after{content:" ▼";font-size:.6rem}
+
+.cl-toggle{margin:2px 0 10px}
+.cl-toggle .cbtn[aria-pressed="false"]{opacity:.6}
+
+.wid-t thead th.grp{border-bottom:1px solid var(--line)}
+.wid-t thead th.sub{font-size:.68rem;color:var(--ink-3);text-transform:none;letter-spacing:0;padding:2px 6px;text-align:center}
+.wid-t td.cell.pl{text-align:left}
+.hm.wid-t td.cell.g0,.hm.wid-t thead th.g0{background:var(--wa)}
+.hm.wid-t td.cell.g1,.hm.wid-t thead th.g1{background:var(--wb)}
+.hm.wid-t td.cell.g0.multi{background:var(--wa2)}
+.hm.wid-t td.cell.g1.multi{background:var(--wb2)}
+.wid-t td.cell.na{color:var(--ink-3)}
+.wid-t td.cell.wl{padding-right:12px}
+.hm td.cell.wid{background:var(--raise);color:var(--ink);font-size:.72rem;white-space:nowrap;padding:3px 8px}
+
+/* ===== Project selection page (gated-results summary) ===== */
+:root{--stripe:#f1f5fa; --rowhov:#e4ecf6; --blue:#337ab7; --arrow:#c9ced6; --warn:#c2502e; --picked:#dbe6f6; --picked-bar:#3a5c86}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--stripe:#1c222a; --rowhov:#232d3a; --blue:#6aa6e0; --arrow:#4a525d; --warn:#e8876a; --picked:#22324a; --picked-bar:#8ab4f0}}
+:root[data-theme="dark"]{--stripe:#1c222a; --rowhov:#232d3a; --blue:#6aa6e0; --arrow:#4a525d; --warn:#e8876a; --picked:#22324a; --picked-bar:#8ab4f0}
+#selectView{gap:16px;max-width:1600px}
+#selectView>header{text-align:center;padding-top:28px;align-items:center}
+#selectView h1{font-family:var(--f-display);font-weight:500;font-size:clamp(1.7rem,4vw,2.4rem);line-height:1.15;margin:0;color:var(--accent);letter-spacing:-.01em;text-wrap:balance}
+#selectView .sub{margin:4px auto 0;color:var(--ink-2);max-width:80ch;font-size:1rem}
+#selectView .ctl-row{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end}
+#selectView .ctl-row.top{align-items:center}
+#selectView .folder{font-family:var(--f-mono);font-size:.85rem;color:var(--ink);padding:5px 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface);word-break:break-all;min-width:0}
+#selectView .gbtn{font:inherit;font-size:.85rem;cursor:pointer;background:var(--btn-bg);border:1px solid var(--btn-line);color:var(--ink);padding:6px 12px;border-radius:6px}
+#selectView .gbtn:hover:not(:disabled){border-color:var(--sel)}
+#selectView .gbtn:disabled{opacity:.45;cursor:default}
+#selectView .gbtn.primary{background:var(--sel);border-color:var(--sel);color:#fff;font-weight:600}
+#selectView .pick{position:relative;overflow:hidden}
+#selectView .pick[hidden]{display:none}
+#selectView .gbtn.refresh{background:#d6f0dc;border-color:#9fd3ab;color:#1d5b2c;font-weight:600}
+#selectView .gbtn.refresh:hover:not(:disabled){background:#c4e8cd;border-color:#7cc08c}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) #selectView .gbtn.refresh{background:#244a30;border-color:#3d7a4f;color:#d6f0dc}}
+:root[data-theme="dark"] #selectView .gbtn.refresh{background:#244a30;border-color:#3d7a4f;color:#d6f0dc}
+#selectView .pick input{position:absolute;inset:0;opacity:0;cursor:pointer}
+#selectView .status{font-size:.82rem;color:var(--ink-3);font-family:var(--f-mono)}
+#selectView .status.err{color:var(--warn)}
+#selectView .controls{display:flex;flex-direction:column;gap:12px;padding:12px 0}
+#selectView .field{display:flex;flex-direction:column;gap:4px;min-width:0;flex:0 1 20rem}
+#selectView .field label{text-transform:none;letter-spacing:0;font-size:.85rem;font-weight:600;color:var(--ink-2);font-family:var(--f-mono)}
+#selectView .sel{position:relative;display:block;width:100%}
+#selectView .sel::after{content:"";position:absolute;right:16px;top:50%;width:7px;height:7px;border-right:2px solid var(--ink-2);border-bottom:2px solid var(--ink-2);transform:translateY(-70%) rotate(45deg);pointer-events:none}
+#selectView select{appearance:none;-webkit-appearance:none;width:100%;max-width:100%;padding:6px 38px 6px 12px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--ink);font:inherit;font-size:.9rem;cursor:pointer;box-shadow:0 1px 2px rgba(15,23,32,.06)}
+#selectView select:hover{border-color:var(--ink-3)}
+#selectView select:focus-visible{outline:none;border-color:var(--sel);box-shadow:0 0 0 3px color-mix(in srgb,var(--sel) 28%,transparent)}
+@media (prefers-reduced-motion:no-preference){#selectView select{transition:border-color .12s,box-shadow .12s}}
+#selectView .gempty{padding:48px 16px;text-align:center;color:var(--ink-3);border:2px dashed var(--btn-line);border-radius:12px;background:var(--surface)}
+#selectView .gempty b{display:block;font-family:var(--f-display);font-weight:500;font-size:1.15rem;color:var(--ink);margin-bottom:4px}
+#selectView .actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px}
+#selectView .actions .count{font-size:.88rem;color:var(--ink-2)}
+#selectView .gscroll{overflow-x:auto;background:var(--surface);padding:6px 0;border:0;border-radius:0}
+#selectView table{border-collapse:collapse;width:100%;font-size:.95rem;font-family:var(--f-body);color:var(--ink)}
+#selectView th,#selectView td{padding:8px 10px;text-align:left;white-space:nowrap;border:0}
+#selectView th{position:sticky;top:0;z-index:1;background:var(--surface);font-weight:700;color:var(--ink);font-size:.95rem;text-transform:none;letter-spacing:0;cursor:pointer;user-select:none;padding-right:28px}
+#selectView th[data-k]::before,#selectView th[data-k]::after{position:absolute;right:10px;font-size:.55rem;line-height:1;color:var(--arrow)}
+#selectView th[data-k]::before{content:"▲";top:calc(50% - 9px)}
+#selectView th[data-k]::after{content:"▼";top:calc(50% + 1px)}
+#selectView th[data-dir="asc"]::before,#selectView th[data-dir="desc"]::after{color:var(--ink-2)}
+#selectView th.rn{cursor:default;padding-right:6px;width:1%}
+#selectView td.rn{padding-right:6px;width:1%;font-variant-numeric:tabular-nums}
+#selectView tbody tr{cursor:pointer}
+#selectView tbody tr:nth-child(even) td{background:var(--stripe)}
+#selectView tbody tr:hover td{background:var(--rowhov)}
+#selectView tbody tr.picked td{background:var(--picked);font-weight:600}
+#selectView tbody tr.picked td.rn{box-shadow:inset 4px 0 0 var(--picked-bar)}
+#selectView td.num,#selectView th.num{text-align:left;font-family:inherit;font-variant-numeric:tabular-nums}
+#selectView td.na{color:var(--ink-3)}
+#selectView .foot{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px 16px}
+#selectView .total{flex-basis:100%;margin-top:14px;font-size:1.35rem;color:var(--ink-2);font-variant-numeric:tabular-nums}
+#selectView .gpager{display:flex;flex-wrap:wrap;gap:0;border:1px solid var(--line);border-radius:4px;overflow:hidden;background:var(--surface)}
+#selectView .gpager button,#selectView .gpager span{font:inherit;font-size:.95rem;padding:8px 14px;border:0;border-left:1px solid var(--line);background:var(--surface);color:var(--blue);cursor:pointer;font-variant-numeric:tabular-nums}
+#selectView .gpager>:first-child{border-left:0}
+#selectView .gpager span{color:var(--ink-3);cursor:default}
+#selectView .gpager button:hover:not(:disabled):not(.on){background:var(--raise)}
+#selectView .gpager button:disabled{background:var(--raise);color:var(--ink-3);cursor:default}
+#selectView .gpager button.on{background:var(--blue);color:#fff;cursor:default}
+#selectView .errs{font-size:.8rem;color:var(--warn);margin:0;padding-left:18px}
+.cover-actions{display:flex;gap:10px;flex-wrap:wrap}
+</style>
+</head>
+<body style="margin:0">
+
+<div class="topbar"><div class="topbar-in"><img src="data:image/png;base64,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" alt="Sanavia Oncology"><nav aria-label="Location"></nav><button type="button" class="theme-btn bar-theme" aria-label="Switch color theme"></button></div></div>
+<div class="wrap" id="selectView">
+  <div class="ctl-row top">
+    <label class="gbtn primary pick" id="pickBtn">Choose folder<input type="file" id="dirInput" webkitdirectory directory multiple></label>
+    <button type="button" class="gbtn refresh" id="refBtn" hidden title="Read the gated-results files in this folder again">Refresh data</button>
+    <span class="folder" id="folder">No folder chosen</span>
+    <button type="button" class="gbtn" id="clrBtn" hidden>Clear</button>
+    <span class="status" id="status" role="status"></span>
+  </div>
+  <header>
+    <h1>Select a project (or multiple projects)</h1>
+    <p class="sub">Click on row to select project(s) and proceed to the next page</p>
+  </header>
+
+  <section class="controls" aria-label="Filters">
+    <div class="ctl-row">
+      <div class="field"><label for="fGroup">project_group</label><span class="sel"><select id="fGroup"><option value="">All</option></select></span></div>
+      <div class="field"><label for="fExp">experiment_type</label><span class="sel"><select id="fExp"><option value="">All</option></select></span></div>
+      <div class="field"><label for="fSana">sana_project</label><span class="sel"><select id="fSana"><option value="">All</option></select></span></div>
+    </div>
+  </section>
+
+  <div class="actions" id="actions" hidden>
+    <button type="button" class="gbtn primary" id="nextBtn" disabled>Next →</button>
+    <button type="button" class="gbtn" id="selAllBtn">Select all shown</button>
+    <button type="button" class="gbtn" id="selClrBtn">Clear selection</button>
+    <span class="count" id="selCount"></span>
+  </div>
+
+  <div class="gempty" id="emptyBox"><b>No folder loaded</b>Click “Choose folder” and pick the project folder. Files are read in your browser only; nothing is uploaded.</div>
+  <div class="gscroll" id="tableBox" hidden><table id="tbl"><thead></thead><tbody></tbody></table></div>
+  <div class="foot" id="foot" hidden></div>
+  <ul class="errs" id="errs"></ul>
+</div>
+
+<div class="wrap cover" id="coverView" hidden>
+  <header class="cover-head">
+    <div class="title-row"><button type="button" class="theme-btn" aria-label="Switch color theme"></button></div>
+    <div class="eyebrow">Flow cytometry</div>
+    <h1 class="cover-title">Flow cytometry<br><em>by study</em></h1>
+    <p class="cover-sub">Studies built from the projects you selected. Choose a study to explore its binding and internalization results: MFI heatmaps by probe, cell line and dose, sample counts, and well-level data.</p>
+    <div class="meta" id="coverMeta"></div>
+    <div class="cover-actions"><button type="button" class="back-btn" id="toSelect">← Back to project selection</button></div>
+  </header>
+  <div class="studies" id="studyCards"></div>
+</div>
+
+<div class="wrap" id="studyView" hidden>
+  <header>
+    <div class="title-row"><button type="button" class="back-btn" id="backBtn">← All studies</button>
+      <button type="button" class="theme-btn" id="themeBtn" aria-label="Switch color theme"></button></div>
+    <div class="title-row">
+      <h1><span class="pn" id="projName">SANA01</span> <span>Flow Cytometry Data</span></h1></div>
+    <div class="meta" id="meta"></div>
+  </header>
+
+  <nav class="nav" aria-label="Data grouping">
+    <div class="nav-row"><span class="eyebrow">Experiment type</span><div class="tabs" id="tabsEt" role="tablist"></div></div>
+    <div class="nav-row"><span class="eyebrow">Dosing schedule</span><div class="tabs sub" id="tabsDs" role="tablist"></div></div>
+    <div class="nav-row" id="rowDose"><span class="eyebrow">Dose</span><div class="cells" id="fDose" role="group" aria-label="Dose"></div></div>
+    <div class="nav-row" id="rowCell"><span class="eyebrow">Cell line</span><div class="cells" id="fTarget" role="group" aria-label="Cell line"></div></div>
+    <div class="nav-row"><span class="eyebrow">Assembly type</span><div class="cells" id="fAsm" role="group" aria-label="Assembly type"></div></div>
+  </nav>
+
+  <section class="filters" aria-label="Filters">
+    <div class="field"><label for="fProbe">Probes <span id="probeCount"></span></label><input type="search" id="fProbe" placeholder="e.g. 3000, 2975, 1431"></div>
+    <div class="cart" aria-label="Data cart"><button type="button" class="btn cart-add" id="cartAdd">Add view to cart</button><span class="cart-info" id="cartInfo">Cart: 0 wells</span><button type="button" class="btn" id="cartClr" disabled>Clear</button><button type="button" class="btn" id="cartDl" disabled>Download CSV</button><button type="button" class="btn" id="pxcDl" disabled title="Downloads the Probe × conc table for the current view">Download probe x conc table</button><span class="cart-msg" id="cartMsg" role="status"></span></div>
+    <div class="cart drop" aria-label="To-drop cart"><span class="drop-title">Drop selected wells</span><button type="button" class="btn" id="dropMode" aria-pressed="false">Select to drop</button><span class="cart-info" id="dropInfo">To drop: 0 wells</span><button type="button" class="btn" id="dropHide" aria-pressed="false" disabled>Hide</button><button type="button" class="btn" id="dropClr" disabled>Clear</button><button type="button" class="btn" id="dropDl" disabled title="Adds the wells to drop to 00-drop-folder/to-drop-wells_cummulative.csv">Update drop list</button><span class="cart-msg" id="dropMsg" role="status"></span></div>
+  </section>
+
+
+  <div class="study-grid">
+  <aside class="projside" aria-label="Project name"><div class="pcards" id="fProjB" role="group" aria-label="Project name"></div></aside>
+  <section class="stack" id="main"></section>
+  </div>
+
+</div>
+<footer class="site-foot"><div class="f1"><h5>Sanavia Oncology</h5>Flow Cytometry Data · SANA01 · SANA03 · SANA04</div><div class="f2">© 2026 Sanavia Oncology Inc.</div></footer>
+<div id="tip" hidden></div>
+
+<script>
+const RAWS = {}; // filled from the projects selected on the first page
+let META = ""; // folder + selected projects, shown on the study pages
+// drop every well recorded at 0 (ug/ml)
+function pruneZero(R){
+  const z=R.dicts.probe_conc.indexOf("0 (ug/ml)"); if(z<0) return;
+  const keep=R.cols.probe_conc.map((v,i)=>v!==z?i:-1).filter(i=>i>=0);
+  for(const k of Object.keys(R.cols)) R.cols[k]=keep.map(i=>R.cols[k][i]);
+  R.n=keep.length;
+}
+const DICT_COLS=['experiment_type','dosing_schedule','dose_type','project_name','Platename','target_spec_name','probe_name','Probe ID','Primary Role','mfi_channel','date','probe_conc','notes'];
+const EMPTY_RAW={dicts:Object.fromEntries(DICT_COLS.map(k=>[k,[]])), cols:Object.fromEntries([...DICT_COLS,'well','conc','gmfi','gmed','log10','viable','total'].map(k=>[k,[]])), n:0, session:"", download:""};
+let PROJ = "SANA01";
+let GR = []; // wells for the Graph tab (all current filters)
+let XR = []; // (no longer used by the Probe × conc tab, which uses GR)
+let VIEW = []; // well indices currently shown in the heatmap
+const CART = new Map(); // "STUDY:index" -> [study, index]; cleared on page reload
+let RAW = RAWS[PROJ] || EMPTY_RAW, D = RAW.dicts, C = RAW.cols, N = RAW.n;
+const ETL = {binding_expr:"Binding expression", intern_expr:"Internalization"};
+const DSL = {titration:"Titration", fixed_dose:"Fixed dose"};
+const METL = {gmfi:"MFI", gmed:"MFI (median)", log10:"Log10 MFI"};
+const SERIES = 8;
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt = v => v==null||isNaN(v) ? "–" : (Math.abs(v)>=1000 ? Math.round(v).toLocaleString("en-US") : Math.abs(v)>=10 ? v.toFixed(1) : v.toFixed(2));
+const fmtC = c => c>=1 ? String(+c.toFixed(2)) : String(+c.toPrecision(2));
+const mean = a => a.reduce((s,x)=>s+x,0)/a.length;
+const cv = a => { if(a.length<2) return null; const m=mean(a); const sd=Math.sqrt(a.reduce((s,x)=>s+(x-m)**2,0)/(a.length-1)); return m? 100*sd/Math.abs(m):null; };
+const v = (k,i) => D[k][C[k][i]];
+const shortProbe = p => p;
+
+let st = {avg:true, pj:"", rep:"", plate:"", hsort:null, hpage:0, wf:{plate:"",well:"",project:""}, view:"graph", et:"binding_expr", ds:"titration", project:"", target:"", q:"", metric:"gmfi", ctrl:true, yscale:"log",
+  sel:[], sort:{k:"max",dir:"desc"}, showAllT:false, showAllH:false, page:0, wsort:{k:"plate",dir:"asc"}};
+try{ const s=JSON.parse(localStorage.getItem("sana01-flow")||"null"); if(s){ for(const k of ["et","ds","yscale"]) if(k in s) st[k]=s[k]; } }catch(e){}
+const save = () => { try{ localStorage.setItem("sana01-flow", JSON.stringify({et:st.et,ds:st.ds,metric:st.metric,yscale:st.yscale,ctrl:st.ctrl})); }catch(e){} };
+
+let IDX = Array.from({length:N},(_,i)=>i);
+const asm = i => v("probe_name",i).split("|")[0];
+const isCtrl = i =>v("Primary Role",i)==="control";
+/* multi-select buttons: a selection is "*" (All) or an array of chosen values */
+const isAll = x => !x || x==="*"; // [] = "Hide all" (nothing selected)
+const isNone = x => Array.isArray(x) && !x.length;
+const inSel = (x,val) => isAll(x) || (Array.isArray(x) && x.includes(val));
+const onSel = (x,val) => !isAll(x) && Array.isArray(x) && x.includes(val);
+function toggleSel(cur,val){ if(val==="*") return "*"; if(val==="__none__") return []; const a=isAll(cur)?[]:cur.slice(); const k=a.indexOf(val); if(k>=0) a.splice(k,1); else a.push(val); return a.length?a:"*"; }
+const pruneSel = (x,ok) => { if(isAll(x)) return "*"; if(isNone(x)) return []; if(!(ok.size??ok.length)) return x; /* nothing available (another row is hidden): keep the choice */ const a=x.filter(y=>ok.has?ok.has(y):ok.includes(y)); return a.length?a:"*"; };
+// facets: options for each selector come from the data filtered by every OTHER selector (project, cell line, assembly type, dose)
+function qPass(i){ const terms=st.q.trim().toLowerCase().split(",").map(s=>s.trim()).filter(Boolean); return !terms.length || terms.some(s=>v("probe_name",i).toLowerCase().includes(s) || v("Probe ID",i).toLowerCase().includes(s)); }
+var hideDrop=false; /* "Hide" in Drop selected wells: leave out wells in the to-drop list */
+const dropHid = i => hideDrop && DROP.has(wKey(i));
+function facet(skip){ const fx=st.ds==="fixed_dose"; return IDX.filter(i => !dropHid(i) && v("experiment_type",i)===st.et && v("dosing_schedule",i)===st.ds && qPass(i) && (st.ctrl || !isCtrl(i)) &&
+  (skip==="pj" || inSel(st.pj, v("project_name",i))) &&
+  (skip==="t" || inSel(st.target, v("target_spec_name",i))) &&
+  (skip==="a" || inSel(st.asm, asm(i))) &&
+  (skip==="d" || inSel(st.dose, v("probe_conc",i))) &&
+  (skip==="hd" || fx || !(st.hideD && st.hideD.has(v("probe_conc",i)))) &&          // "Show doses" (titration tables)
+  (skip==="hc" || !fx || !(st.hideCL && st.hideCL.has(v("target_spec_name",i))))); } // "Show cell lines" (fixed-dose tables)
+function pjBase(){ return facet("pj"); } // project cards reflect the Cell line, Dose and Assembly type selections
+function base(){ return IDX.filter(i => !dropHid(i) && v("experiment_type",i)===st.et && v("dosing_schedule",i)===st.ds && inSel(st.pj, v("project_name",i))); }
+function rows(){
+  const q = st.q.trim().toLowerCase();
+  const terms = q.split(",").map(s=>s.trim()).filter(Boolean); // "3000, 2975, 1431" matches any term
+  return base().filter(i =>
+    (!st.project || v("project_name",i)===st.project) &&
+    inSel(st.target, v("target_spec_name",i)) &&
+    inSel(st.asm, asm(i)) &&
+    (st.ctrl || !isCtrl(i)) &&
+    (!terms.length || terms.some(s=>v("probe_name",i).toLowerCase().includes(s) || v("Probe ID",i).toLowerCase().includes(s))));
+}
+const val = i => C[st.metric][i];
+
+/* ---------- meta / nav / filters ---------- */
+function renderMeta(){
+  const ds = D.date;
+  $("#meta").innerHTML = `<span>${esc(META)}</span>`;
+}
+function countBy(et,ds){ let n=0; for(let i=0;i<N;i++) if(v("experiment_type",i)===et && (!ds||v("dosing_schedule",i)===ds)) n++; return n; }
+let ALL_ASM = [...new Set(IDX.map(asm))].sort();
+const CL_ORDER = ["CFPAC1","CFPAC1-20","CFPAC1-5","CFPAC1-39"];
+const clSort = (a,b)=>{ const ia=CL_ORDER.indexOf(a), ib=CL_ORDER.indexOf(b); return (ia<0?99:ia)-(ib<0?99:ib) || a.localeCompare(b); };
+let ALL_TGT = D.target_spec_name.slice().sort(clSort);
+const dis = ok => ok ? "" : ' disabled title="Not available for the current selection"';
+function renderNav(){
+  $("#tabsEt").innerHTML = D.experiment_type.map(et => { const n=countBy(et); return `<button class="tab" role="tab" data-et="${et}" aria-selected="${et===st.et}"${dis(n>0)}>${ETL[et]||et}<small>${n.toLocaleString()}</small></button>`; }).join("");
+  const dss = D.dosing_schedule.slice().sort((a,b)=> a==="fixed_dose"?-1:b==="fixed_dose"?1:0);
+  const okDs = dss.filter(ds=>countBy(st.et,ds)>0);
+  if(!okDs.includes(st.ds)) st.ds = okDs[0];
+  $("#tabsDs").innerHTML = dss.map(ds => { const n=countBy(st.et,ds); return `<button class="tab" role="tab" data-ds="${ds}" aria-selected="${ds===st.ds}"${dis(n>0)}>${DSL[ds]||ds}<small>${n.toLocaleString()}</small></button>`; }).join("");
+}
+function renderFilters(){
+  { const PB=pjBase(); if(Array.isArray(st.pj) && PB.length){ const ok=new Set(PB.map(i=>v("project_name",i))); const a=st.pj.filter(x=>ok.has(x)); st.pj=a.length?a:""; } } // keep the project while another row is on "Hide all"
+  { const tN=st.target===null, aN=st.asm===null; /* null = default: first available cell line / assembly type */
+    if(tN) st.target=""; if(aN) st.asm="";
+    if(tN){ const ok=new Set(facet("t").map(i=>v("target_spec_name",i))); const f=ALL_TGT.find(t=>ok.has(t)); st.target=f!=null?[f]:""; }
+    if(aN){ const ok=new Set(facet("a").map(asm)); const f=ALL_ASM.find(a=>ok.has(a)); st.asm=f!=null?[f]:""; } }
+  const okT = new Set(facet("t").map(i=>v("target_spec_name",i)));
+  st.target = pruneSel(st.target, okT);
+  const okA = new Set(facet("a").map(asm));
+  $("#rowCell").hidden = false; $("#rowDose").hidden = false; // Dose and Cell line rows always shown
+  st.asm = pruneSel(st.asm, okA);
+  $("#fTarget").innerHTML = `<button type="button" class="cbtn" data-t="*" aria-pressed="${isAll(st.target)}">Show all</button>` + ALL_TGT.filter(p=>okT.has(p)).map(p=>`<button type="button" class="cbtn" data-t="${esc(p)}" aria-pressed="${onSel(st.target,p)}"${dis(okT.has(p))}>${esc(p)}</button>`).join("") + `<button type="button" class="cbtn hideall" data-t="__none__" aria-pressed="${isNone(st.target)}">Hide all</button>`;
+  $("#fAsm").innerHTML = `<button type="button" class="cbtn" data-a="*" aria-pressed="${isAll(st.asm)}">Show all</button>` + ALL_ASM.filter(p=>okA.has(p)).map(p=>`<button type="button" class="cbtn" data-a="${esc(p)}" aria-pressed="${onSel(st.asm,p)}"${dis(okA.has(p))}>${esc(p)}</button>`).join("") + `<button type="button" class="cbtn hideall" data-a="__none__" aria-pressed="${isNone(st.asm)}">Hide all</button>`;
+  if($("#fProbe").value!==st.q) $("#fProbe").value = st.q;
+}
+function renderKpis(r){
+  const u = k => new Set(r.map(i=>C[k][i])).size;
+  const chans = [...new Set(r.map(i=>v("mfi_channel",i)))].join(", ")||"–";
+  const k = [[r.length.toLocaleString(),"wells"],[u("probe_name"),"probes"],[u("target_spec_name"),"cell lines"],[u("Platename"),"plates"],[chans,"MFI channel"]];
+  $("#kpis").innerHTML = k.map(([a,b])=>`<div class="kpi"><b>${esc(a)}</b><span>${b}</span></div>`).join("");
+}
+
+/* ---------- tooltip ---------- */
+const tip = $("#tip");
+function showTip(e, html){ tip.innerHTML = html; tip.hidden=false; moveTip(e); }
+function moveTip(e){ const w=tip.offsetWidth, h=tip.offsetHeight; let x=e.clientX+14, y=e.clientY+14; if(x+w>innerWidth-8) x=e.clientX-w-14; if(y+h>innerHeight-8) y=e.clientY-h-14; tip.style.left=x+"px"; tip.style.top=y+"px"; }
+function hideTip(){ tip.hidden=true; }
+
+/* ---------- titration ---------- */
+function aggTitration(r){
+  const m = new Map();
+  for(const i of r){
+    const key = v("probe_name",i)+"@@"+v("target_spec_name",i);
+    let o = m.get(key);
+    if(!o){ o={key, probe:v("probe_name",i), target:v("target_spec_name",i), ctrl:isCtrl(i), byC:new Map(), plates:new Set(), projects:new Set(), n:0}; m.set(key,o); }
+    const c = C.conc[i]; if(!o.byC.has(c)) o.byC.set(c,[]); o.byC.get(c).push(val(i));
+    o.plates.add(v("Platename",i)); o.projects.add(v("project_name",i)); o.n++;
+  }
+  for(const o of m.values()){
+    o.pts = [...o.byC.entries()].map(([c,a])=>({c, m:mean(a), n:a.length, cv:cv(a)})).sort((a,b)=>a.c-b.c);
+    const pos = o.pts.filter(p=>p.c>0);
+    o.max = Math.max(...o.pts.map(p=>p.m));
+    o.top = pos.length ? pos[pos.length-1].m : null;
+    o.topC = pos.length ? pos[pos.length-1].c : null;
+    o.half = halfMax(pos);
+  }
+  return [...m.values()];
+}
+function halfMax(p){
+  if(p.length<3) return null;
+  const lo=p[0].m, hi=Math.max(...p.map(x=>x.m)); if(hi<=lo) return null;
+  const t = lo+(hi-lo)/2;
+  for(let k=1;k<p.length;k++){ const a=p[k-1], b=p[k]; if(a.m<t && b.m>=t){ const f=(t-a.m)/(b.m-a.m); return Math.pow(10, Math.log10(a.c)+f*(Math.log10(b.c)-Math.log10(a.c))); } }
+  return null;
+}
+function renderTitration(r){
+  const agg = aggTitration(r);
+  const keys = new Set(agg.map(o=>o.key));
+  st.sel = st.sel.filter(k=>keys.has(k));
+  if(!st.sel.length && !st.cleared) st.sel = agg.filter(o=>!o.ctrl).sort((a,b)=>b.max-a.max).slice(0,5).map(o=>o.key);
+  const color = k => `var(--s${st.sel.indexOf(k)+1})`;
+  const sorted = sortRows(agg, st.sort);
+  const shown = st.showAllT ? sorted : sorted.slice(0,60);
+  const main = $("#main");
+  main.innerHTML = `
+    <div class="panel-head"><div><h2>Dose–response</h2><p>Mean ${METL[st.metric]} per concentration, pooled across replicate wells and plates for each probe on each cell line. Tick rows in the table to compare up to ${SERIES} curves.</p></div>
+      <div class="seg" role="group" aria-label="Y-axis scale"><button data-ys="log" aria-pressed="${st.yscale==="log"}">Log y</button><button data-ys="lin" aria-pressed="${st.yscale==="lin"}">Linear y</button></div></div>
+    <div class="legend" id="legend"></div>
+    <div class="chart" id="chart"></div>
+    <p class="note">X axis is log-scaled; 0 µg/mL wells are omitted from the curve but kept in the table and well data. Half-max concentration is interpolated between the two doses that bracket 50% of the curve's range, not a fitted EC50.</p>
+    <div class="panel-head"><h2>Probe × cell line summary</h2><p>${agg.length} curves · ${st.sel.length}/${SERIES} plotted</p></div>
+    <div class="tscroll"><table id="tTable"><thead><tr>
+      <th class="nosort"></th>${th("probe","Probe")}${th("target","Cell line")}${th("projects","Project")}${th("plates","Plates","num")}${th("n","Wells","num")}${th("top","Top-dose mean","num")}${th("max","Max mean","num")}${th("half","Half-max µg/mL","num")}<th class="nosort">Curve</th></tr></thead>
+      <tbody>${shown.map(o=>`<tr data-key="${esc(o.key)}" class="${st.sel.includes(o.key)?"sel":""}">
+        <td><input type="checkbox" aria-label="Plot ${esc(o.probe)} on ${esc(o.target)}" ${st.sel.includes(o.key)?"checked":""} ${!st.sel.includes(o.key)&&st.sel.length>=SERIES?"disabled":""}></td>
+        <td>${st.sel.includes(o.key)?`<span class="sw" style="background:${color(o.key)};margin-right:6px"></span>`:""}${esc(shortProbe(o.probe))}${o.ctrl?'<span class="chip">ref</span>':""}</td>
+        <td>${esc(o.target)}</td><td class="mono trunc" title="${esc([...o.projects].join("; "))}">${esc([...o.projects].join("; "))}</td>
+        <td class="num">${o.plates.size}</td><td class="num">${o.n}</td><td class="num">${fmt(o.top)}</td><td class="num">${fmt(o.max)}</td><td class="num">${o.half?fmtC(o.half):"–"}</td>
+        <td>${spark(o)}</td></tr>`).join("")}</tbody></table></div>
+    ${sorted.length>60?`<div class="pager"><button class="btn" id="moreT">${st.showAllT?"Show top 60":"Show all "+sorted.length+" rows"}</button></div>`:""}`;
+  $("#legend").innerHTML = st.sel.map(k=>{const o=agg.find(a=>a.key===k);return `<span class="li"><span class="sw" style="background:${color(k)}"></span>${esc(shortProbe(o.probe))} · ${esc(o.target)}</span>`}).join("");
+  drawCurves(agg.filter(o=>st.sel.includes(o.key)), color);
+  bindSort("#tTable", st.sort, renderMain);
+  main.querySelectorAll("#tTable tbody input").forEach(cb=>cb.addEventListener("change",e=>{
+    const k = e.target.closest("tr").dataset.key;
+    if(e.target.checked){ if(st.sel.length<SERIES) st.sel.push(k); } else st.sel = st.sel.filter(x=>x!==k);
+    st.cleared = !st.sel.length;
+    renderMain();
+  }));
+  main.querySelectorAll("[data-ys]").forEach(b=>b.addEventListener("click",()=>{st.yscale=b.dataset.ys;save();renderMain();}));
+  const more=$("#moreT"); if(more) more.addEventListener("click",()=>{st.showAllT=!st.showAllT;renderMain();});
+}
+function th(k,label,cls=""){ const s=st.sort; return `<th class="${cls}" data-k="${k}" ${s.k===k?`data-dir="${s.dir}"`:""}>${label}</th>`; }
+function sortRows(a, s){
+  const get = o => s.k==="projects"?[...o.projects][0]:s.k==="plates"?o.plates.size:o[s.k];
+  return a.slice().sort((x,y)=>{ let p=get(x),q=get(y); if(p==null) return 1; if(q==null) return -1; const r = typeof p==="string"? p.localeCompare(q) : p-q; return s.dir==="asc"?r:-r; });
+}
+function bindSort(sel, s, cb){
+  document.querySelectorAll(sel+" th[data-k]").forEach(h=>h.addEventListener("click",()=>{
+    const k=h.dataset.k; if(s.k===k) s.dir = s.dir==="asc"?"desc":"asc"; else { s.k=k; s.dir = h.classList.contains("num")?"desc":"asc"; } cb();
+  }));
+}
+function spark(o){
+  const p=o.pts.filter(x=>x.c>0); if(p.length<2) return "";
+  const w=80,h=20, xs=p.map(x=>Math.log10(x.c)), ys=p.map(x=>x.m);
+  const x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+  const X=x=>2+(x-x0)/(x1-x0||1)*(w-4), Y=y=>h-2-(y-y0)/(y1-y0||1)*(h-4);
+  const d=p.map((q,k)=>(k?"L":"M")+X(xs[k]).toFixed(1)+","+Y(ys[k]).toFixed(1)).join("");
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><path d="${d}" fill="none" style="stroke:var(--ink-3)" stroke-width="1.5"/><circle cx="${X(xs.at(-1))}" cy="${Y(ys.at(-1))}" r="2.5" style="fill:var(--ink-2)"/></svg>`;
+}
+function niceLogTicks(lo,hi){ const t=[]; for(let e=Math.floor(Math.log10(lo)); e<=Math.ceil(Math.log10(hi)); e++){ for(const m of [1,3]){ const x=m*10**e; if(x>=lo*0.999&&x<=hi*1.001) t.push(x);} } return t; }
+function niceLin(lo,hi,n=5){ const span=hi-lo||1, step0=span/n, mag=10**Math.floor(Math.log10(step0)); const step=[1,2,2.5,5,10].map(m=>m*mag).find(s=>s>=step0); const t=[]; for(let x=Math.ceil(lo/step)*step;x<=hi+1e-9;x+=step) t.push(+x.toPrecision(10)); return t; }
+const tickLab = y => y>=1e6? (y/1e6)+"M" : y>=1000? (y/1000)+"k" : String(+y.toPrecision(3));
+function drawCurves(series, color){
+  const el=$("#chart");
+  if(!series.length){ el.innerHTML=`<div class="panel empty">No curves selected. Tick rows in the table below to plot them.</div>`; return; }
+  const W=Math.max(320, el.clientWidth||900), H=Math.round(Math.min(420, Math.max(260, W*0.42)));
+  const m={l:58,r:16,t:12,b:44};
+  const pts=series.flatMap(s=>s.pts.filter(p=>p.c>0));
+  const cs=pts.map(p=>p.c), ysv=pts.map(p=>p.m);
+  const cx0=Math.min(...cs), cx1=Math.max(...cs);
+  const logY = st.yscale==="log" && st.metric!=="log10" && Math.min(...ysv)>0;
+  let y0=Math.min(...ysv), y1=Math.max(...ysv);
+  let yt;
+  if(logY){ y0=10**Math.floor(Math.log10(y0)); y1=10**Math.ceil(Math.log10(y1)); yt=niceLogTicks(y0,y1); }
+  else { yt=niceLin(Math.min(0,y0), y1); y0=yt[0]; y1=yt.at(-1); if(y1<Math.max(...ysv)){ y1=Math.max(...ysv); } }
+  const X=c=>m.l+(Math.log10(c)-Math.log10(cx0))/((Math.log10(cx1)-Math.log10(cx0))||1)*(W-m.l-m.r);
+  const Y=y=>logY? H-m.b-(Math.log10(y)-Math.log10(y0))/(Math.log10(y1)-Math.log10(y0))*(H-m.t-m.b) : H-m.b-(y-y0)/((y1-y0)||1)*(H-m.t-m.b);
+  const xt=[...new Set(cs)].sort((a,b)=>a-b);
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Dose-response curves">`;
+  s+=`<g class="grid">${yt.map(y=>`<line x1="${m.l}" x2="${W-m.r}" y1="${Y(y)}" y2="${Y(y)}"/>`).join("")}</g>`;
+  s+=`<g class="axis">${yt.map(y=>`<text x="${m.l-8}" y="${Y(y)+3.5}" text-anchor="end">${tickLab(y)}</text>`).join("")}
+     ${xt.map(c=>`<text x="${X(c)}" y="${H-m.b+16}" text-anchor="middle">${fmtC(c)}</text>`).join("")}
+     <line x1="${m.l}" x2="${W-m.r}" y1="${H-m.b}" y2="${H-m.b}" style="stroke:var(--ink-3)"/></g>`;
+  s+=`<text class="axis-title" x="${(m.l+W-m.r)/2}" y="${H-6}" text-anchor="middle">Probe concentration (µg/mL, log scale)</text>`;
+  s+=`<text class="axis-title" transform="translate(13 ${(m.t+H-m.b)/2}) rotate(-90)" text-anchor="middle">${METL[st.metric]}</text>`;
+  for(const o of series){
+    const p=o.pts.filter(q=>q.c>0), col=color(o.key);
+    s+=`<path d="${p.map((q,k)=>(k?"L":"M")+X(q.c).toFixed(1)+","+Y(q.m).toFixed(1)).join("")}" fill="none" style="stroke:${col}" stroke-width="2" stroke-linejoin="round"/>`;
+  }
+  for(const o of series){
+    const col=color(o.key);
+    for(const q of o.pts.filter(q=>q.c>0)){
+      s+=`<circle cx="${X(q.c)}" cy="${Y(q.m)}" r="4.5" style="fill:${col};stroke:var(--surface)" stroke-width="2"/>`;
+      s+=`<circle class="hit" cx="${X(q.c)}" cy="${Y(q.m)}" r="11" fill="transparent" data-k="${esc(o.key)}" data-c="${q.c}"/>`;
+    }
+  }
+  s+=`</svg>`; el.innerHTML=s;
+  el.querySelectorAll(".hit").forEach(h=>{
+    h.addEventListener("mouseenter",e=>{ const o=series.find(x=>x.key===h.dataset.k), q=o.pts.find(p=>p.c===+h.dataset.c);
+      showTip(e,`<b>${esc(shortProbe(o.probe))}</b> · ${esc(o.target)}<br><span class="k">Conc</span> ${fmtC(q.c)} µg/mL<br><span class="k">Mean ${METL[st.metric]}</span> ${fmt(q.m)}<br><span class="k">Wells</span> ${q.n}${q.cv!=null?` · <span class="k">CV</span> ${q.cv.toFixed(0)}%`:""}`); });
+    h.addEventListener("mousemove",moveTip); h.addEventListener("mouseleave",hideTip);
+  });
+}
+
+/* ---------- fixed dose heatmap ---------- */
+// Red-yellow-blue (ColorBrewer RdYlBu, reversed): blue = low, red = high
+const RAMP_L=["#4f70ad","#6487ba","#6c91c0","#a3c4dc","#b6d2e4","#edf7d8","#f9fdc3","#f8de8d","#c7442e"]; // user-supplied scheme, low → high
+const RAMP_D=RAMP_L;
+function isDark(){ const t=document.documentElement.getAttribute("data-theme"); if(t) return t==="dark"; return matchMedia("(prefers-color-scheme: dark)").matches; }
+function rampAt(t){ const R=isDark()?RAMP_D:RAMP_L; const x=Math.max(0,Math.min(1,t))*(R.length-1); const k=Math.min(R.length-2,Math.floor(x)), f=x-k;
+  const a=R[k],b=R[k+1]; const h=s=>[1,3,5].map(j=>parseInt(s.slice(j,j+2),16)); const A=h(a),B=h(b);
+  return {bg:"rgb("+A.map((v,j)=>Math.round(v+(B[j]-v)*f)).join(",")+")", ink: (()=>{const c=A.map((v,j)=>v+(B[j]-v)*f); return (0.299*c[0]+0.587*c[1]+0.114*c[2])/255<0.55?"#ffffff":"#1b2230";})()}; }
+function renderFixed(r){
+  const concs=[...new Set(r.map(i=>C.probe_conc[i]))].sort((a,b)=>a-b).map(k=>D.probe_conc[k]);
+  const multiC = concs.length>1;
+  const colKey = i => v("target_spec_name",i);
+  const pKey = i => v("probe_name",i)+(multiC?"@@"+v("probe_conc",i):"");
+  const presentT=new Set(r.map(i=>v("target_spec_name",i)));
+  const allCols= ALL_TGT.filter(k=>presentT.has(k)); // drop cell lines with no data
+  const hidden = st.hideCL || (st.hideCL=new Set());
+  let cols = allCols.filter(k=>!hidden.has(k));
+  const clToggle = false ? `<div class="nav-row dose-row cl-toggle"><span class="eyebrow">Show cell lines</span><div class="cells">${allCols.map(k=>`<button type="button" class="cbtn" data-hcl="${esc(k)}" aria-pressed="${!hidden.has(k)}" title="${hidden.has(k)?"Show":"Hide"} ${esc(k)}">${esc(k)}</button>`).join("")}${hidden.size?`<button type="button" class="btn" data-hcl="__all__">Show all</button>`:""}${hidden.size<allCols.length?`<button type="button" class="btn" data-hcl="__none__" data-keys="${esc(JSON.stringify(allCols))}">Hide all</button>`:""}</div></div>` : "";
+  const m=new Map();
+  // one row per probe x plate (no averaging): each cell holds a single well; a repeat well for the same cell starts a new row
+  for(const i of r){
+    if(st.avg){ // average replicates: one row per probe per project; wells for the same cell (across plates) are averaged
+      const p=pKey(i)+"@@P:"+v("project_name",i); let o=m.get(p);
+      if(!o){ o={key:p, probe:v("probe_name",i), conc:v("probe_conc",i), plate:"", wells:[], ctrl:isCtrl(i), cells:new Map(), plates:new Set(), projects:new Set()}; m.set(p,o); }
+      if(isCtrl(i)) o.ctrl=true;
+      const ck_=colKey(i); let c=o.cells.get(ck_); if(!c){ c={vals:[],idx:[],plates:new Set()}; o.cells.set(ck_,c); } c.vals.push(val(i)); c.idx.push(i); c.plates.add(v("Platename",i)); o.wells.push(C.well[i]); o.plates.add(v("Platename",i)); o.projects.add(v("project_name",i)); continue; }
+    const base=pKey(i)+"@@"+v("Platename",i), ck=colKey(i); let rep=0, p, o;
+    for(;;){ p=base+"#"+rep; o=m.get(p); if(!o || !o.cells.has(ck)) break; rep++; }
+    if(!o){ o={key:p, probe:v("probe_name",i), conc:v("probe_conc",i), plate:v("Platename",i), wells:[], ctrl:isCtrl(i), cells:new Map(), plates:new Set(), projects:new Set()}; m.set(p,o); }
+    if(isCtrl(i)) o.ctrl=true;
+    o.wells.push(C.well[i]); o.cells.set(ck,{vals:[val(i)],idx:[i],plates:new Set([v("Platename",i)])}); o.plates.add(v("Platename",i)); o.projects.add(v("project_name",i));
+  }
+  const probes=[...m.values()];
+  if(st.avg) for(const o of probes) o.plate=[...o.plates].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).join(", ");
+  for(const o of probes){ for(const c of o.cells.values()){ c.m=mean(c.vals); c.cv=cv(c.vals); } o.max=Math.max(...[...o.cells.values()].map(c=>c.m)); }
+  const asmOf=o=>o.probe.split("|")[0];
+  const pjOf=o=>[...o.projects].sort().join(", "), nc=(x,y)=>x.localeCompare(y,undefined,{numeric:true});
+  probes.sort((a,b)=> nc(pjOf(a),pjOf(b)) || nc(a.probe,b.probe) || (parseFloat(a.conc)-parseFloat(b.conc))); /* project, then probe */
+  ensureSort(cols);
+  { const keep=probes.filter(o=>cols.some(k=>o.cells.has(k))); probes.length=0; probes.push(...keep); } // drop rows with no data in any shown column
+  const REPS=new Map(); for(const o of probes) REPS.set(o.probe,(REPS.get(o.probe)||0)+1);
+  if(st.rep){ const keep=probes.filter(o=>(REPS.get(o.probe)>1?"YES":"NO")===st.rep); probes.length=0; probes.push(...keep); $("#probeCount").textContent=`(N = ${new Set(keep.map(o=>o.probe)).size.toLocaleString()})`; }
+  VIEW = probes.flatMap(o=>cols.flatMap(k=>{const c=o.cells.get(k); return c?c.idx:[];})); // wells shown (for the data cart)
+  { const S=hsortApply(probes,{rep:o=>REPS.get(o.probe)>1?1:0, probe:o=>o.probe, plate:o=>o.plate, well:o=>wellsTxt(o), ref:o=>o.ctrl?0:1, asm:o=>asmOf(o), proj:pjOf, dose:o=>parseFloat(o.conc)}); probes.length=0; probes.push(...S);
+    if(mfiSortDir()) probes.sort((a,b)=> nc(pjOf(a),pjOf(b)) || (parseFloat(a.conc)-parseFloat(b.conc)) || (b.ctrl-a.ctrl)); } /* MFI sort: within project and dose, controls first (matches the bar plots) */
+  const shown = hSlice(probes);
+  const allM=probes.flatMap(o=>[...o.cells.values()].map(c=>c.m));
+  const useLog = st.metric!=="log10" && Math.min(...allM)>0;
+  const tr = x=>useLog?Math.log10(x):x;
+  // color range per assembly type, shared across cell lines
+  const gKey = (o,k) => o.probe.split("|")[0];
+  const G = new Map();
+  for(const o of probes) for(const [k,c] of o.cells){ const g=gKey(o,k); const x=tr(c.m); const e=G.get(g)||{lo:Infinity,hi:-Infinity}; e.lo=Math.min(e.lo,x); e.hi=Math.max(e.hi,x); G.set(g,e); }
+  const T = (x,o,k)=>{ const e=G.get(gKey(o,k)); return e.hi>e.lo ? (tr(x)-e.lo)/(e.hi-e.lo) : 0.5; };
+  const gRange = (o,k)=>{ const e=G.get(gKey(o,k)); const u=y=>useLog?10**y:y; return fmt(u(e.lo))+" – "+fmt(u(e.hi)); };
+  const colHead = k=>esc(k);
+  const doseLbl = concs.join(" & ");
+  const main=$("#main");
+  if(!r.length){ main.innerHTML=`<div class="panel empty">No wells match these filters.</div>`; return; }
+  const R=isDark()?RAMP_D:RAMP_L;
+  main.innerHTML=`
+    <div class="panel">${hmTabs()}<div data-pane="resp" ${st.view==="resp"?"":"hidden"}>
+    <div class="panel-head"><div><h2>Probe × cell line response</h2><p>${st.avg?"Mean Fluorescence Intensity (MFI) where * = project duplicates are averaged.":"Mean Fluorescence Intensity (MFI) for each well, one row per probe per plate (not averaged)."}</p></div>
+      <div class="hm-right"><button type="button" class="btn avg-btn" data-avg aria-pressed="${!!st.avg}">${st.avg?"Show individual wells":"Average replicates within project"}</button><div class="scale"><span>Low</span><i style="background:linear-gradient(90deg,${R.join(",")})"></i><span>High</span></div></div></div>
+    ${clToggle}
+    <div class="tscroll" style="border:0"><table class="hm"><thead><tr>${hth('Probe','probe','corner')}${hth('Reference','ref','corner2')}${hth('Project name','proj','corner2')}${hth('Dose','dose','corner2')}${cols.map(k=>hth(colHead(k),"m:"+k,"ch")).join("")}</tr></thead>
+    <tbody>${shown.map(o=>`<tr data-w="${[...o.cells.values()].flatMap(c=>c.idx).join(",")}"><td class="rowlab">${esc(shortProbe(o.probe))}</td><td class="dosecol refcol">${o.ctrl?'<span class="chip">control</span>':""}</td><td class="dosecol">${esc([...o.projects].join(", "))}</td><td class="dosecol">${esc(o.conc)}</td>${cols.map(k=>{const c=o.cells.get(k); if(!c) return `<td class="cell na">·</td>`; const col=rampAt(T(c.m,o,k)); return `<td class="cell" style="background:${col.bg};color:${col.ink}" data-p="${esc(o.key)}" data-k="${esc(k)}" data-wi="${c.idx.join(",")}">${fmt(c.m)}${c.vals.length>1?"*":""}</td>`}).join("")}</tr>`).join("")}</tbody></table></div>
+    ${hPager(probes.length, "")}</div>
+    <div data-pane="graph" ${st.view==="graph"?"":"hidden"}>${st.view==="graph"?graphSection():""}</div>
+    <div data-pane="wid" ${st.view==="wid"?"":"hidden"}>${wellIdSection(`${hth('Probe','probe','corner')}${hth('Reference','ref','corner2')}${hth('Project name','proj','corner2')}${hth('Dose','dose','corner2')}`, shown, cols, k=>k,
+      o=>`<td class="rowlab">${esc(shortProbe(o.probe))}</td><td class="dosecol refcol">${o.ctrl?'<span class="chip">control</span>':""}</td><td class="dosecol">${esc([...o.projects].join(", "))}</td><td class="dosecol">${esc(o.conc)}</td>`,
+      (o,k)=>o.cells.get(k), probes).replace('<div class="tscroll"', clToggle+'<div class="tscroll"')}${hPager(probes.length, "")}</div>
+    ${wellsPane()}</div>`;
+  main.querySelectorAll("td.cell[data-p]").forEach(td=>{
+    td.addEventListener("mouseenter",e=>{ const o=m.get(td.dataset.p), c=o.cells.get(td.dataset.k); const t=td.dataset.k;
+      showTip(e,`<b>${esc(shortProbe(o.probe))}</b>${o.conc?" · "+esc(o.conc):""} · ${esc(t)}<br><span class="k">Mean ${METL[st.metric]}</span> ${fmt(c.m)}${wellList(c)}`); });
+    td.addEventListener("mousemove",moveTip); td.addEventListener("mouseleave",hideTip);
+  });
+}
+
+/* ---------- titration heatmap: rows = probe × cell line, columns = doses ---------- */
+function renderTitrationHM(r){
+  const doseIdx=[...new Set(r.map(i=>C.probe_conc[i]))].sort((a,b)=>parseFloat(D.probe_conc[a])-parseFloat(D.probe_conc[b]));
+  const allDoses=doseIdx.map(k=>D.probe_conc[k]);
+  const hidD = st.hideD || (st.hideD=new Set());
+  let doses = allDoses.filter(d=>!hidD.has(d));
+  const doseToggle = false ? `<div class="nav-row dose-row cl-toggle"><span class="eyebrow">Show doses</span><div class="cells">${allDoses.map(d=>`<button type="button" class="cbtn" data-hd="${esc(d)}" aria-pressed="${!hidD.has(d)}" title="${hidD.has(d)?"Show":"Hide"} ${esc(d)}">${esc(d)}</button>`).join("")}${hidD.size?`<button type="button" class="btn" data-hd="__all__">Show all</button>`:""}${hidD.size<allDoses.length?`<button type="button" class="btn" data-hd="__none__" data-keys="${esc(JSON.stringify(allDoses))}">Hide all</button>`:""}</div></div>` : "";
+  const m=new Map();
+  // one row per probe x cell line x plate (no averaging): each cell holds a single well
+  for(const i of r){
+    if(st.avg){ // average replicates: one row per probe per cell line per project
+      const key=v("probe_name",i)+"@@"+v("target_spec_name",i)+"@@P:"+v("project_name",i); let o=m.get(key);
+      if(!o){ o={key, probe:v("probe_name",i), target:v("target_spec_name",i), plate:"", wells:[], ctrl:false, cells:new Map(), projects:new Set(), plates:new Set()}; m.set(key,o); }
+      if(isCtrl(i)) o.ctrl=true;
+      const ck_=v("probe_conc",i); let c=o.cells.get(ck_); if(!c){ c={vals:[],idx:[],plates:new Set()}; o.cells.set(ck_,c); } c.vals.push(val(i)); c.idx.push(i); c.plates.add(v("Platename",i)); o.wells.push(C.well[i]); o.plates.add(v("Platename",i)); o.projects.add(v("project_name",i)); continue; }
+    const base=v("probe_name",i)+"@@"+v("target_spec_name",i)+"@@"+v("Platename",i), d=v("probe_conc",i); let rep=0, key, o;
+    for(;;){ key=base+"#"+rep; o=m.get(key); if(!o || !o.cells.has(d)) break; rep++; }
+    if(!o){ o={key, probe:v("probe_name",i), target:v("target_spec_name",i), plate:v("Platename",i), wells:[], ctrl:false, cells:new Map(), projects:new Set()}; m.set(key,o); }
+    if(isCtrl(i)) o.ctrl=true;
+    o.wells.push(C.well[i]); o.cells.set(d,{vals:[val(i)],idx:[i],plates:new Set([v("Platename",i)])}); o.projects.add(v("project_name",i));
+  }
+  const rowsA=[...m.values()];
+  if(st.avg) for(const o of rowsA) o.plate=[...o.plates].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).join(", ");
+  for(const o of rowsA) for(const c of o.cells.values()){ c.m=mean(c.vals); c.cv=cv(c.vals); }
+  const asmOf=o=>o.probe.split("|")[0];
+  const pjOf=o=>[...o.projects].sort().join(", "), nc=(x,y)=>x.localeCompare(y,undefined,{numeric:true});
+  rowsA.sort((a,b)=> nc(pjOf(a),pjOf(b)) || nc(a.probe,b.probe) || clSort(a.target,b.target)); /* project, then probe */
+  ensureSort(doses);
+  { const keep=rowsA.filter(o=>doses.some(d=>o.cells.has(d))); rowsA.length=0; rowsA.push(...keep); } // drop rows with no data in any shown column
+  const REPS=new Map(); for(const o of rowsA) REPS.set(o.probe,(REPS.get(o.probe)||0)+1);
+  if(st.rep){ const keep=rowsA.filter(o=>(REPS.get(o.probe)>1?"YES":"NO")===st.rep); rowsA.length=0; rowsA.push(...keep); $("#probeCount").textContent=`(N = ${new Set(keep.map(o=>o.probe)).size.toLocaleString()})`; }
+  VIEW = rowsA.flatMap(o=>doses.flatMap(d=>{const c=o.cells.get(d); return c?c.idx:[];})); // wells shown (for the data cart)
+  { const S=hsortApply(rowsA,{rep:o=>REPS.get(o.probe)>1?1:0, probe:o=>o.probe, plate:o=>o.plate, well:o=>wellsTxt(o), ref:o=>o.ctrl?0:1, asm:o=>asmOf(o), proj:pjOf, cl:o=>o.target}); rowsA.length=0; rowsA.push(...S); }
+  const shown = hSlice(rowsA);
+  const allM=rowsA.flatMap(o=>[...o.cells.values()].map(c=>c.m));
+  const useLog = st.metric!=="log10" && Math.min(...allM)>0;
+  const tr = x=>useLog?Math.log10(x):x;
+  // color range per assembly type, shared across cell lines and doses
+  const G=new Map();
+  for(const o of rowsA) for(const c of o.cells.values()){ const g=asmOf(o), x=tr(c.m); const e=G.get(g)||{lo:Infinity,hi:-Infinity}; e.lo=Math.min(e.lo,x); e.hi=Math.max(e.hi,x); G.set(g,e); }
+  const T=(x,o)=>{ const e=G.get(asmOf(o)); return e.hi>e.lo?(tr(x)-e.lo)/(e.hi-e.lo):0.5; };
+  const gRange=o=>{ const e=G.get(asmOf(o)); const u=y=>useLog?10**y:y; return fmt(u(e.lo))+" – "+fmt(u(e.hi)); };
+  const R=isDark()?RAMP_D:RAMP_L;
+  const main=$("#main");
+  main.innerHTML=`
+    <div class="panel">${hmTabs()}<div data-pane="resp" ${st.view==="resp"?"":"hidden"}>
+    <div class="panel-head"><div><h2>Titration response</h2><p>${st.avg?"Mean Fluorescence Intensity (MFI) where * = project duplicates are averaged.":"Mean Fluorescence Intensity (MFI) for each well, one row per probe per plate (not averaged)."}</p></div>
+      <div class="hm-right"><button type="button" class="btn avg-btn" data-avg aria-pressed="${!!st.avg}">${st.avg?"Show individual wells":"Average replicates within project"}</button><div class="scale"><span>Low</span><i style="background:linear-gradient(90deg,${R.join(",")})"></i><span>High</span></div></div></div>
+    ${doseToggle}
+    <div class="tscroll" style="border:0"><table class="hm"><thead><tr>${hth('Probe','probe','corner')}${hth('Reference','ref','corner2')}${hth('Project name','proj','corner2')}${hth('Cell line','cl','corner2')}${doses.map(d=>hth(esc(d),"m:"+d,"ch")).join("")}</tr></thead>
+    <tbody>${shown.map(o=>`<tr data-w="${[...o.cells.values()].flatMap(c=>c.idx).join(",")}"><td class="rowlab">${esc(o.probe)}</td><td class="dosecol refcol">${o.ctrl?'<span class="chip">control</span>':""}</td><td class="dosecol">${esc([...o.projects].join(", "))}</td><td class="dosecol">${esc(o.target)}</td>${doses.map(d=>{const c=o.cells.get(d); if(!c) return `<td class="cell na">·</td>`; const col=rampAt(T(c.m,o)); return `<td class="cell" style="background:${col.bg};color:${col.ink}" data-k="${esc(o.key)}" data-d="${esc(d)}" data-wi="${c.idx.join(",")}">${fmt(c.m)}${c.vals.length>1?"*":""}</td>`}).join("")}</tr>`).join("")}</tbody></table></div>
+    ${hPager(rowsA.length, "")}</div>
+    <div data-pane="graph" ${st.view==="graph"?"":"hidden"}>${st.view==="graph"?graphSection():""}</div>
+    <div data-pane="wid" ${st.view==="wid"?"":"hidden"}>${wellIdSection(`${hth('Probe','probe','corner')}${hth('Reference','ref','corner2')}${hth('Project name','proj','corner2')}${hth('Cell line','cl','corner2')}`, shown, doses, d=>d,
+      o=>`<td class="rowlab">${esc(o.probe)}</td><td class="dosecol refcol">${o.ctrl?'<span class="chip">control</span>':""}</td><td class="dosecol">${esc([...o.projects].join(", "))}</td><td class="dosecol">${esc(o.target)}</td>`,
+      (o,d)=>o.cells.get(d), rowsA).replace('<div class="tscroll"', doseToggle+'<div class="tscroll"')}${hPager(rowsA.length, "")}</div>
+    ${wellsPane()}</div>`;
+  main.querySelectorAll("td.cell[data-k]").forEach(td=>{
+    td.addEventListener("mouseenter",e=>{ const o=m.get(td.dataset.k), c=o.cells.get(td.dataset.d);
+      showTip(e,`<b>${esc(o.probe)}</b> · ${esc(o.target)} · ${esc(td.dataset.d)}<br><span class="k">Mean ${METL[st.metric]}</span> ${fmt(c.m)}${wellList(c)}`); });
+    td.addEventListener("mousemove",moveTip); td.addEventListener("mouseleave",hideTip);
+  });
+}
+
+/* ---------- heatmap paging (20 rows per page) ---------- */
+const HP=25, XP=20; /* Response table & Plate information: 25 rows; Probe × conc: 20 */
+function hSlice(list){ const pages=Math.max(1,Math.ceil(list.length/HP)); st.hpage=Math.min(st.hpage||0,pages-1); return list.slice(st.hpage*HP,(st.hpage+1)*HP); }
+function hPager(n, info){ const pages=Math.max(1,Math.ceil(n/HP)); const a=n?st.hpage*HP+1:0, b=Math.min(n,(st.hpage+1)*HP);
+  return `<div class="pager"><button class="btn" data-hp="prev" ${st.hpage===0?"disabled":""}>Previous</button><span>Rows ${a}–${b} of ${n} · page ${st.hpage+1} of ${pages}</span><button class="btn" data-hp="next" ${st.hpage>=pages-1?"disabled":""}>Next</button>${info?`<span>${info}</span>`:""}</div>`; }
+/* ---------- heatmap column sorting ---------- */
+function hth(label,key,cls){ if(!(key==="probe"||key==="proj"||key.startsWith("m:"))) return `<th class="${cls}">${label}</th>`; /* Probe, Project name and value columns are sortable */
+  const on=st.hsort&&st.hsort.k===key; return `<th class="${cls} hs${on?" on":""}" data-hs="${esc(key)}" ${on?`data-dir="${st.hsort.dir}"`:""} title="Sort by ${esc(label)}">${label}</th>`; }
+function mfiSortDir(){ return st.ds==='fixed_dose' && st.hsort && st.hsort.k.startsWith('m:') ? st.hsort.dir : null; } /* shared MFI sort: Response table column sort <-> bar plot order */
+function ensureSort(cols){ const s=st.hsort; const ok=s && (s.k==="probe"||s.k==="proj"||(s.k.startsWith("m:")&&(cols||[]).includes(s.k.slice(2)))); if(!ok) st.hsort={k:"proj",dir:"asc"}; } /* default: Project name, then Probe */
+function wellsTxt(o){ return [...new Set(o.wells)].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).join(", "); }
+function hsortApply(list, F){
+  const s=st.hsort; if(!s) return list;
+  let g;
+  if(s.k.startsWith("m:")){ const k=s.k.slice(2); g=o=>{const c=o.cells.get(k); return c?c.m:null}; }
+  else if(s.k.startsWith("n:")){ const k=s.k.slice(2); g=o=>{const c=o.cells.get(k); return c?c.vals.length:null}; }
+  else g=F[s.k];
+  if(!g) return list;
+  const d=s.dir==="asc"?1:-1;
+  return list.map((o,i)=>[o,i]).sort((A,B)=>{ const a=g(A[0]), b=g(B[0]);
+    if(a==null&&b==null) return A[1]-B[1]; if(a==null) return 1; if(b==null) return -1;
+    const r = typeof a==="string" ? a.localeCompare(b,undefined,{numeric:true}) : a-b; return r? r*d : A[1]-B[1]; }).map(x=>x[0]);
+}
+/* ---------- view tabs ---------- */
+function viewTabs(){
+  const V=[["count","Sample size"],["resp","Response"],["wells","Well-level data"]];
+  return `<div class="vtabs" role="tablist">${V.map(([k,l])=>`<button type="button" role="tab" data-view="${k}" aria-selected="${st.view===k}">${l}</button>`).join("")}</div>`;
+}
+/* ---------- Probe × conc download (no tab): one row per cell line × probe, one column per concentration; each cell is the mean MFI of
+   all wells for that cell line × probe × concentration in the current view (all selected projects and plates pooled), rounded ---------- */
+function pxcData(){
+  const tit=st.ds==="titration", hidD=tit?(st.hideD||new Set()):new Set(), hidC=tit?new Set():(st.hideCL||new Set());
+  const W=GR.filter(i=>!hidD.has(v("probe_conc",i)) && !hidC.has(v("target_spec_name",i)));
+  const concs=[...new Set(W.map(i=>v("probe_conc",i)))].sort((a,b)=>parseFloat(a)-parseFloat(b));
+  const M=new Map();
+  for(const i of W){ const t=v("target_spec_name",i), p=v("probe_name",i), x=val(i); if(x==null||isNaN(x)) continue;
+    const k=t+"@@"+p; let o=M.get(k); if(!o){ o={target:t, probe:p, ctrl:false, cells:new Map()}; M.set(k,o); } if(isCtrl(i)) o.ctrl=true;
+    const d=v("probe_conc",i); let c=o.cells.get(d); if(!c){ c={vals:[],idx:[]}; o.cells.set(d,c); } c.vals.push(x); c.idx.push(i); }
+  const nc=(a,b)=>a.localeCompare(b,undefined,{numeric:true});
+  let list=[...M.values()].sort((a,b)=>clSort(a.target,b.target) || nc(a.probe,b.probe));
+  if(st.hsort && st.hsort.k==="probe" && st.hsort.dir==="desc") list=list.slice().sort((a,b)=>clSort(a.target,b.target) || nc(b.probe,a.probe));
+  const dp=st.metric==="log10"?2:0, rnd=x=>{ const f=10**dp; return Math.round(x*f)/f; };
+  for(const o of list) for(const c of o.cells.values()) c.m=rnd(mean(c.vals));
+  return {list, concs, rnd, dp};
+}
+$("#pxcDl").addEventListener("click",()=>pxcDownload());
+/* Download CSV of the Probe × conc table (all rows), same layout as the example: "target_spec","probe_name","<conc>",... */
+async function pxcDownload(){
+  const {list, concs, dp}=pxcData(), msg=$("#cartMsg");
+  const q=s=>'"'+String(s).replace(/"/g,'""')+'"';
+  const lines=[["target_spec","probe_name",...concs].map(q).join(",")];
+  for(const o of list) lines.push([q(o.target), q(o.probe), ...concs.map(d=>{ const c=o.cells.get(d); return c? (dp?c.m.toFixed(dp):String(Math.round(c.m))) : "NA"; })].join(","));
+  const data=lines.join("\n")+"\n", filename=`${PROJ||"probe"}_probe-x-conc_${new Date().toISOString().slice(0,10)}.csv`;
+  if(window.showSaveFilePicker){
+    try{ const h=await window.showSaveFilePicker({suggestedName:filename, startIn:"downloads", types:[{description:"CSV file", accept:{"text/csv":[".csv"]}}]});
+      const w=await h.createWritable(); await w.write(data); await w.close(); if(msg) msg.textContent=`Saved as ${h.name}`; return; }
+    catch(e){ if(e.name==="AbortError"){ if(msg) msg.textContent="Save cancelled"; return; } } } // other errors: fall back to a normal download
+  try{ if(!DL) throw new Error("no download"); await DL.save({filename, data}); if(msg) msg.textContent="Downloaded"; }
+  catch(e){ if(msg) msg.textContent = e&&e.code==="declined" ? "Download cancelled" : "Download not available"; }
+}
+/* ---------- Graph: dot plot of MFI, one dot per well; x = cell line -> concentration -> antibody ---------- */
+const GP=20; // antibodies per page
+/* ---------- titration line plots: per project, one panel per cell line, one line per antibody (x = concentration, log) ---------- */
+const LP_COL=["var(--s1)","var(--s2)","var(--s3)","var(--s4)","var(--s5)","var(--s6)","var(--s7)","var(--s8)"];
+function linePlots(W,probes,lo,hi,logY){
+  let col=new Map(); /* colors are set per group of 8 antibodies */
+  const doses=[...new Set(W.map(i=>v("probe_conc",i)))].sort((a,b)=>parseFloat(a)-parseFloat(b)), dn=doses.map(d=>parseFloat(d)).filter(x=>x>0);
+  const X0=Math.log10(Math.min(...dn)), X1=Math.log10(Math.max(...dn));
+  const PW=300, PH=230, m={l:58,r:14,t:10,b:44}, pad=8;
+  let Y, ticks;
+  if(logY){ let L0=Math.log10(lo), L1=Math.log10(hi); if(L1-L0<1e-6){L0-=0.1;L1+=0.1;} Y=v=>m.t+pad+(1-(Math.log10(v)-L0)/(L1-L0))*(PH-2*pad);
+    let c=[]; for(let k=Math.floor(L0);k<=Math.ceil(L1);k++) for(const f of [1,2,5]){ const t=f*10**k; if(t>=10**L0&&t<=10**L1) c.push(t); } if(c.length>6) c=c.filter(t=>Math.log10(t)%1===0); ticks=c; }
+  else { let a=lo,b=hi; if(b-a<1e-9){a-=1;b+=1;} Y=v=>m.t+pad+(1-(v-a)/(b-a))*(PH-2*pad); const raw=(b-a)/4, mag=10**Math.floor(Math.log10(raw)), stp=[1,2,5,10].map(f=>f*mag).find(x=>x>=raw); ticks=[]; for(let t=Math.ceil(a/stp)*stp;t<=b+1e-9;t+=stp) ticks.push(+t.toPrecision(12)); }
+  { const ext=[lo,hi].filter(t=>ticks.every(u=>Math.abs(Y(u)-Y(t))>14)); ticks=ticks.concat(ext).sort((x,y)=>x-y); }
+  const fmtT=t=>t>=1e6?+(t/1e6).toPrecision(3)+"M":t>=1000?+(t/1000).toPrecision(3)+"k":String(+t.toPrecision(3));
+  const X=d=>{ const x=parseFloat(d); return m.l+12+(X1>X0?(Math.log10(x)-X0)/(X1-X0):0.5)*(PW-m.l-m.r-24); };
+  const panel=(Wc,cl)=>{
+    // series: with averaging, one per antibody (mean per dose); without, one per antibody x plate (x repeat, as in the heatmap)
+    const S=new Map();
+    for(const i of Wc){ const p=v("probe_name",i), d=v("probe_conc",i); let key=p;
+      if(!st.avg){ const base=p+"|"+v("Platename",i); let r=0; while(S.has(base+"#"+r) && S.get(base+"#"+r).pts.has(d)) r++; key=base+"#"+r; }
+      if(!S.has(key)) S.set(key,{p,pts:new Map()}); const o=S.get(key); if(!o.pts.has(d)) o.pts.set(d,[]); o.pts.get(d).push(i); }
+    let svg=`<svg class="gplot lplot" width="${PW}" height="${PH+m.b}" viewBox="0 0 ${PW} ${PH+m.b}" role="img" aria-label="MFI by concentration, ${esc(cl)}">`;
+    for(const t of ticks){ const y=Y(t); svg+=`<line x1="${m.l}" x2="${PW-m.r}" y1="${y}" y2="${y}" class="g-grid"/><text x="${m.l-6}" y="${y+4}" text-anchor="end" class="g-tick">${fmtT(t)}</text>`; }
+    for(const d of doses){ const x=X(d); svg+=`<line x1="${x}" x2="${x}" y1="${m.t}" y2="${m.t+PH}" class="g-vline"/><text transform="translate(${x+3} ${m.t+PH+6}) rotate(-45)" text-anchor="end" class="g-tick">${esc(String(parseFloat(d)))}</text>`; }
+    svg+=`<text x="${(m.l+PW-m.r)/2}" y="${PH+m.b-2}" text-anchor="middle" class="g-tick">ug/ml</text><text transform="translate(12 ${m.t+PH/2}) rotate(-90)" text-anchor="middle" class="g-title">MFI${logY?" (log)":""}</text>`;
+    let gray="", lines="", dots="";
+    for(const [key,o] of S){ const c=col.get(o.p)||"var(--ink-3)", ctrl=[...o.pts.values()].flat().some(isCtrl);
+      const P=[...o.pts.entries()].sort((a,b)=>parseFloat(a[0])-parseFloat(b[0])).map(([d,ix])=>({d,ix,y:mean(ix.map(i=>C.gmfi[i]))}));
+      lines+=`<path d="${P.map((q,k)=>(k?"L":"M")+X(q.d).toFixed(1)+" "+Y(q.y).toFixed(1)).join(" ")}" class="lp-line${ctrl?" ctrl":""}" style="stroke:${c}"><title>${esc(o.p)}</title></path>`;
+      // wells as white dots (as in the bar plots); the line runs through the Response table values
+      for(const q of P) q.ix.forEach((i,n)=>{ const jx=q.ix.length>1?[-3,3,0,-4.5,4.5,-1.5,1.5][n%7]:0; dots+=`<circle cx="${(X(q.d)+jx).toFixed(1)}" cy="${Y(C.gmfi[i]).toFixed(1)}" r="3.4" class="g-wdot" data-i="${i}"/>`; }); }
+    return `<div class="lp-panel"><div class="lp-cl">${esc(cl)}</div>${svg}${gray}${lines}${dots}</svg></div>`;
+  };
+  const projs=[...new Set(W.map(i=>v("project_name",i)))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+  const GS=8; /* antibodies per group (one color each) */
+  const swatch=p=>`<span class="li"><span class="sw" style="background:${col.get(p)};border-radius:0;height:3px;width:16px"></span>${esc(p)}</span>`;
+  const keyLeg=`<div class="legend g-legend"><span class="li"><span class="sw" style="background:var(--surface);border:1.5px solid var(--ink)"></span>Well</span><span class="li"><span class="sw" style="background:none;border-top:2px dashed var(--ink-3);border-radius:0;height:0;width:16px"></span>Control</span></div>`;
+  return keyLeg+`<div class="grow lgrow" style="display:block">${projs.map(pj=>{ const Wp=W.filter(i=>v("project_name",i)===pj); const ps=probes.filter(p=>Wp.some(i=>v("probe_name",i)===p));
+    let out=""; for(let g=0; g<ps.length; g+=GS){ const grp=ps.slice(g,g+GS); col=new Map(grp.map((p,k)=>[p,LP_COL[k%LP_COL.length]])); const gs=new Set(grp);
+      const Wg=Wp.filter(i=>gs.has(v("probe_name",i))); const cls=ALL_TGT.filter(t=>Wg.some(i=>v("target_spec_name",i)===t));
+      out+=`<div class="lp-grp">${ps.length>GS?`<div class="lp-gn">Antibodies ${g+1}–${g+grp.length} of ${ps.length}</div>`:""}<div class="legend g-legend">${grp.map(swatch).join("")}</div><div class="lp-row">${cls.map(cl=>panel(Wg.filter(i=>v("target_spec_name",i)===cl),cl)).join("")}</div></div>`; }
+    return `<div class="gproj"><h3 class="gproj-h">${esc(pj)}</h3>${out}</div>`; }).join("")}</div>`;
+}
+function graphSection(){
+  const tit=st.ds==="titration", logY=st.gscale!=="lin";
+  const tog=(label,attr,all,hid)=> all.length ? `<div class="nav-row dose-row cl-toggle"><span class="eyebrow">${label}</span><div class="cells">${all.map(k=>`<button type="button" class="cbtn" data-${attr}="${esc(k)}" aria-pressed="${!hid.has(k)}">${esc(k)}</button>`).join("")}${hid.size?`<button type="button" class="btn" data-${attr}="__all__">Show all</button>`:""}${hid.size<all.length?`<button type="button" class="btn" data-${attr}="__none__" data-keys="${esc(JSON.stringify(all))}">Hide all</button>`:""}</div></div>` : "";
+  const hidD=tit?(st.hideD||(st.hideD=new Set())):new Set(), hidC=tit?new Set():(st.hideCL||(st.hideCL=new Set()));
+  const concNum=d=>parseFloat(d); const PS=tit?8:GP; // titration line plots: 8 antibodies per page (one color each)
+  const allD=[...new Set(facet("hd").map(i=>v("probe_conc",i)))].sort((a,b)=>concNum(a)-concNum(b));
+  const allC=ALL_TGT.filter(t=>facet("hc").some(i=>v("target_spec_name",i)===t));
+  const toggles=""; // Dose / Cell line are chosen with the buttons at the top
+  let W=GR.filter(i=>!hidD.has(v("probe_conc",i)) && !hidC.has(v("target_spec_name",i)));
+  if(logY) W=W.filter(i=>C.gmfi[i]>0);
+  const probes=[...new Set(W.map(i=>v("probe_name",i)))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})); if(st.hsort && st.hsort.k==="probe" && st.hsort.dir==="desc") probes.reverse();
+  const pages=Math.max(1,Math.ceil(probes.length/PS)); st.gpage=Math.min(st.gpage||0,pages-1);
+  const pg=new Set(probes); /* no paging: all antibodies, organized by project */
+  const head=`<div class="panel-head"><div><h2>Response plot</h2><p>${tit?`MFI by concentration (log scale), one panel per cell line and one line per antibody${st.avg?"; line = Response table values (mean of replicate wells within a project), dots = wells":" (no averaging; one line per antibody and plate)"}`:`MFI grouped by cell line, then concentration, then antibody${st.avg?"; bar = Response table value (mean of replicate wells within a project), dots = wells, error bar = SD":"; one bar per well (no averaging)"}`}.</p></div>
+    <div class="hm-right">${tit?"":(()=>{ const d=mfiSortDir(); return `<button type="button" class="btn" data-msort aria-pressed="${!!d}" title="Click to cycle: off → high to low → low to high">Sort by MFI${d==="desc"?": high → low":d==="asc"?": low → high":""}</button>`; })()}<button type="button" class="btn avg-btn" data-avg aria-pressed="${!!st.avg}">${st.avg?"Show individual wells":"Average replicates within project"}</button><div class="vtabs gscale" role="group" aria-label="Y axis scale"><button type="button" data-gs="log" aria-selected="${logY}">Log</button><button type="button" data-gs="lin" aria-selected="${!logY}">Linear</button></div></div></div>`; // averaging and Show doses / Show cell lines are set in the Response table
+  const pager="";
+  if(!W.length) return head+pager+`<div class="empty">No wells to plot.</div>`; /* pager sits above the plots */
+  const vals=W.map(i=>C.gmfi[i]), lo=Math.min(...vals), hi=Math.max(...vals); // one y range shared by all project plots
+  if(tit) return head+pager+linePlots(W,[...pg],lo,hi,logY);
+  const MS=mfiSortDir();
+  const plotOne=(W,pOrd)=>{
+  // x layout: cell line blocks -> concentration sub-blocks -> one slot per antibody
+  const SL=22, GC=10, GL=26, cls=ALL_TGT.filter(t=>W.some(i=>v("target_spec_name",i)===t));
+  const slots=[], concG=[], clG=[]; let x=0;
+  for(const cl of cls){ const x0=x; const Wc=W.filter(i=>v("target_spec_name",i)===cl);
+    const cs=[...new Set(Wc.map(i=>v("probe_conc",i)))].sort((a,b)=>concNum(a)-concNum(b));
+    for(const d of cs){ const xd=x; const ps=pOrd.filter(p=>Wc.some(i=>v("probe_conc",i)===d && v("probe_name",i)===p));
+      if(MS){ const mm=new Map(ps.map(p=>[p,mean(Wc.filter(i=>v("probe_conc",i)===d && v("probe_name",i)===p).map(val))])); ps.sort((a,b)=>MS==="asc"?mm.get(a)-mm.get(b):mm.get(b)-mm.get(a)); } /* Sort by MFI (same values as the Response table) */
+      { const ct=new Set(Wc.filter(isCtrl).map(i=>v("probe_name",i))); ps.sort((a,b)=>(ct.has(b)?1:0)-(ct.has(a)?1:0)); } // controls first
+      const gw=Math.max(ps.length*SL,Math.ceil(d.length*6.3)+8), off=(gw-ps.length*SL)/2; // keep room for the concentration label
+      ps.forEach((p,k)=>slots.push({cl,d,p,x:x+off+k*SL+SL/2})); x+=gw; concG.push({d,x0:xd,x1:x}); x+=GC; }
+    x-=GC;
+    { const need=Math.ceil(cl.length*7.6)+16, have=x-x0; // keep room for the cell line name (11.5px bold mono)
+      if(have<need){ const sh=(need-have)/2; slots.forEach(q=>{ if(q.cl===cl) q.x+=sh; }); concG.forEach(g=>{ if(g.x0>=x0) { g.x0+=sh; g.x1+=sh; } }); x=x0+need; } }
+    clG.push({cl,x0,x1:x}); x+=GL; }
+  x-=GL;
+  const slotAt=new Map(slots.map(s=>[s.cl+"|"+s.d+"|"+s.p,s.x]));
+  const LBL=Math.ceil(Math.max(...slots.map(s=>s.p.length))*6.2)+14; // room for the longest rotated antibody name (9.5px mono ~5.8px/char)
+  const m={l:62,r:14,t:12,b:LBL+54}, PH=320, Wd=Math.max(180,m.l+x+m.r), H=m.t+PH+m.b;
+  let Y, ticks; const pad=8; // y range runs from the lowest to the highest MFI shown
+  if(logY){ let L0=Math.log10(lo), L1=Math.log10(hi); if(L1-L0<1e-6){ L0-=0.1; L1+=0.1; }
+    Y=v=>m.t+pad+(1-(Math.log10(v)-L0)/(L1-L0))*(PH-2*pad);
+    const lv=10**L0, hv=10**L1; let c=[]; for(let k=Math.floor(L0);k<=Math.ceil(L1);k++) for(const f of [1,2,5]) { const t=f*10**k; if(t>=lv&&t<=hv) c.push(t); }
+    if(c.length>8) c=c.filter(t=>Math.log10(t)%1===0); ticks=c; }
+  else { let a=Math.min(0,lo), b=hi; /* bars start at 0 on the linear scale */ if(b-a<1e-9){ a-=1; b+=1; } Y=v=>m.t+pad+(1-(v-a)/(b-a))*(PH-2*pad);
+    const raw=(b-a)/5, mag=10**Math.floor(Math.log10(raw)), st=[1,2,5,10].map(f=>f*mag).find(x=>x>=raw); ticks=[]; for(let t=Math.ceil(a/st)*st;t<=b+1e-9;t+=st) ticks.push(+t.toPrecision(12)); }
+  { const ext=(logY?[lo,hi]:[hi]).filter(t=>ticks.every(u=>Math.abs(Y(u)-Y(t))>14)); ticks=ticks.concat(ext).sort((x,y)=>x-y); } // label the min and max too
+  const fmtT=t=>t>=1e6?+(t/1e6).toPrecision(3)+"M":t>=1000?+(t/1000).toPrecision(3)+"k":String(+t.toPrecision(3));
+  let svg=`<svg class="gplot" width="${Wd}" height="${H}" viewBox="0 0 ${Wd} ${H}" role="img" aria-label="Dot plot of MFI by antibody">`;
+  for(const t of ticks){ const y=Y(t); svg+=`<line x1="${m.l}" x2="${Wd-m.r}" y1="${y}" y2="${y}" class="g-grid"/><text x="${m.l-8}" y="${y+4}" text-anchor="end" class="g-tick">${fmtT(t)}</text>`; }
+  svg+=`<text transform="translate(16 ${m.t+PH/2}) rotate(-90)" text-anchor="middle" class="g-title">MFI${logY?" (log scale)":""}</text>`;
+  clG.forEach((g,j)=>{ if(j%2) svg+=`<rect x="${m.l+g.x0-GL/2+4}" y="${m.t}" width="${g.x1-g.x0+GL-8}" height="${PH}" class="g-band"/>`; });
+  for(const s of slots) svg+=`<line x1="${m.l+s.x}" x2="${m.l+s.x}" y1="${m.t}" y2="${m.t+PH+4}" class="g-vline"/>`; // dotted guide per antibody
+  for(const s of slots) svg+=`<text transform="translate(${m.l+s.x+3} ${m.t+PH+8}) rotate(-90)" text-anchor="end" class="g-lab">${esc(s.p)}</text>`;
+  const yC=m.t+PH+LBL+20, yL=m.t+PH+LBL+42;
+  for(const g of concG){ svg+=`<line x1="${m.l+g.x0+1}" x2="${m.l+g.x1-1}" y1="${yC-11}" y2="${yC-11}" class="g-brk"/><text x="${m.l+(g.x0+g.x1)/2}" y="${yC}" text-anchor="middle" class="g-conc">${esc(g.d)}</text>`; }
+  for(const g of clG){ svg+=`<line x1="${m.l+g.x0}" x2="${m.l+g.x1}" y1="${yL-12}" y2="${yL-12}" class="g-brk2"/><text x="${m.l+(g.x0+g.x1)/2}" y="${yL+2}" text-anchor="middle" class="g-cl">${esc(g.cl)}</text>`; }
+  // dots: small deterministic jitter so replicate wells don't hide each other
+  // bars (fixed dose): bar = Response table value (mean of the wells when averaging is on), white dots = wells, error bar = SD (2+ wells)
+  const grp=new Map(); for(const i of W){ const key=v("target_spec_name",i)+"|"+v("probe_conc",i)+"|"+v("probe_name",i); if(!slotAt.has(key)) continue; if(!grp.has(key)) grp.set(key,[]); grp.get(key).push(i); }
+  const base=logY?m.t+PH:Y(0), BW=SL-6, yc=y=>Math.min(base,Math.max(m.t,y));
+  let bars="", errs="", dots="";
+  for(const [key,ix] of grp){ const sx=m.l+slotAt.get(key), ref=ix.some(isCtrl);
+    const sets = st.avg ? [ix] : ix.map(i=>[i]); const w=BW/sets.length;
+    sets.forEach((set,k)=>{ const x0=sx-BW/2+k*w, vals=set.map(i=>C.gmfi[i]), mv=mean(vals), yt=yc(Y(mv));
+      bars+=`<rect x="${x0.toFixed(1)}" y="${yt.toFixed(1)}" width="${Math.max(1,w-1).toFixed(1)}" height="${Math.max(0,base-yt).toFixed(1)}" class="g-bar${ref?" ctrl":""}" ${set.length>1?`data-ag="${set.join(",")}"`:`data-i="${set[0]}"`}/>`;
+      if(set.length>1){ const sd=Math.sqrt(vals.reduce((a,x)=>a+(x-mv)**2,0)/(vals.length-1)); const xm=x0+w/2-0.5, y1=yc(Y(mv+sd)), y2=yc(mv-sd>0||!logY?Y(Math.max(mv-sd,logY?1e-9:mv-sd)):base);
+        errs+=`<line x1="${xm}" x2="${xm}" y1="${y1}" y2="${y2}" class="g-err"/><line x1="${xm-3}" x2="${xm+3}" y1="${y1}" y2="${y1}" class="g-err"/><line x1="${xm-3}" x2="${xm+3}" y1="${y2}" y2="${y2}" class="g-err"/>`; }
+      set.forEach((i,n)=>{ const jx=set.length>1?[-3,3,0,-4.5,4.5,-1.5,1.5][n%7]:0; dots+=`<circle cx="${(x0+w/2-0.5+jx).toFixed(1)}" cy="${yc(Y(C.gmfi[i])).toFixed(1)}" r="3.4" class="g-wdot" data-i="${i}"/>`; });
+    }); }
+  svg+=bars+errs+dots;
+  svg+=`</svg>`;
+  return svg; };
+  const projs=[...new Set(W.map(i=>v("project_name",i)))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+  const plots=projs.map(pj=>{ const Wp=W.filter(i=>v("project_name",i)===pj); const ord=[...pg].filter(p=>Wp.some(i=>v("probe_name",i)===p));
+    return `<div class="gproj"><h3 class="gproj-h">${esc(pj)}</h3>${plotOne(Wp,ord)}</div>`; }).join("");
+  return head+pager+`<div class="legend g-legend"><span class="li"><span class="sw" style="background:var(--bar-s);border-radius:2px"></span>Sample</span><span class="li"><span class="sw" style="background:var(--bar-c);border-radius:2px"></span>Control</span><span class="li"><span class="sw" style="background:var(--surface);border:1.5px solid var(--ink)"></span>Well</span>${st.avg?`<span class="li">Error bar = SD (2+ wells)</span>`:""}</div><div class="grow bgrow">${plots}</div>`; /* projects side by side, separated by a vertical line */
+}
+function hmTabs(){
+  const V=[["graph","Response plot"],["resp","Response table"],["wid","Plate information"],["wells","Well-level data"],["drop","Drop list"]];
+  if(!V.some(([k])=>k===st.view)) st.view="graph"; const cur=st.view;
+  return `<div class="vtabs" role="tablist" aria-label="Heatmap">${V.map(([k,l])=>`<button type="button" role="tab" data-view="${k}" aria-selected="${cur===k}">${l}</button>`).join("")}</div>`;
+}
+function wellsPane(){ return `<div data-pane="wells" ${st.view==="wells"?"":"hidden"}><div class="panel-head"><div><h2>Well-level data</h2></div></div><div class="wfilters" id="wellsFilters"></div><div class="tscroll" id="wellsTable"></div><div class="pager" id="wellsPager" style="margin-top:10px"></div></div>
+  <div data-pane="drop" ${st.view==="drop"?"":"hidden"}><div class="panel-head"><div><h2>Drop list</h2><p id="dlInfo" style="white-space:nowrap">Reading the drop list…</p></div><div class="hm-right"><span class="cart-msg" id="dlMsg" role="status"></span><button type="button" class="btn" id="dlRemove" data-dlrm disabled>Remove selected rows</button><button type="button" class="btn" data-dlref>Refresh</button></div></div><div class="wfilters" id="dlFilters"></div><div class="tscroll" id="dropListBox"></div><div class="pager" id="dlPager" style="margin-top:10px"></div></div>`; }
+function wellList(c){ return `<br><span class="k">Values (${c.idx.length} well${c.idx.length>1?"s":""})</span>`+c.idx.map(i=>`<br>${fmt(val(i))} <span class="k">· ${esc(v("Platename",i))} ${esc(C.well[i])}</span>`).join(""); }
+/* ---------- wells-per-cell heatmap ---------- */
+const COUNT_RAMP=["#f1f5fb","#cde2fb","#9ec5f4","#6da7ec","#3987e5","#256abf","#184f95","#0d366b"];
+function countRamp(t){ const P=COUNT_RAMP.map(h=>[1,3,5].map(j=>parseInt(h.slice(j,j+2),16))); const x=Math.max(0,Math.min(1,t))*(P.length-1); const k=Math.min(P.length-2,Math.floor(x)), f=x-k;
+  const c=P[k].map((a,j)=>a+(P[k+1][j]-a)*f); const lum=(0.299*c[0]+0.587*c[1]+0.114*c[2])/255;
+  return {bg:"rgb("+c.map(Math.round).join(",")+")", ink: lum<0.55?"#ffffff":"#1b2230"}; }
+function countSection(headLead, shown, keys, keyLabel, lead, get, full){
+  const all=(full||shown).flatMap(o=>keys.map(k=>get(o,k)).filter(Boolean).map(c=>c.vals.length));
+  if(!all.length) return "";
+  const mn=Math.min(...all), mx=Math.max(...all);
+  return `<div class="panel-head"><div><h2>Sample size</h2><p>Number of wells averaged into each cell of the Response heatmap, for the same rows.</p></div>
+      <div class="scale"><span>${mn}</span><i style="background:linear-gradient(90deg,${COUNT_RAMP.join(",")})"></i><span>${mx}</span></div></div>
+    <div class="tscroll" style="border:0"><table class="hm"><thead><tr>${headLead}${keys.map(k=>hth(esc(keyLabel(k)),"n:"+k,"ch")).join("")}</tr></thead>
+    <tbody>${shown.map(o=>`<tr>${lead(o)}${keys.map(k=>{const c=get(o,k); if(!c) return `<td class="cell na">·</td>`; const n=c.vals.length; const col=countRamp(mx>mn?(n-mn)/(mx-mn):0.5); return `<td class="cell" style="background:${col.bg};color:${col.ink}">${n}</td>`;}).join("")}</tr>`).join("")}</tbody></table></div>`;
+}
+function wellIdSection(headLead, shown, keys, keyLabel, lead, get){
+  // each column is split in three: Plate | Well | N (total wells) (one line per well when replicates are averaged)
+  const lead2=headLead.replace(/<th /g,'<th rowspan="2" ');
+  return `<div class="panel-head"><div><h2>Plate information</h2><p>Plate and well behind each cell of the Response heatmap, for the same rows.</p></div></div>
+    <div class="tscroll" style="border:0"><table class="hm wid-t"><thead><tr>${lead2}${keys.map((k,j)=>`<th class="ch grp g${j%2}" colspan="3">${esc(keyLabel(k))}</th>`).join("")}</tr>
+    <tr>${keys.map((k,j)=>`<th class="sub g${j%2}">Plate</th><th class="sub g${j%2}">Well</th><th class="sub g${j%2}">N</th>`).join("")}</tr></thead>
+    <tbody>${shown.map(o=>`<tr data-w="${keys.map(k=>get(o,k)).filter(Boolean).flatMap(c=>c.idx).join(",")}">${lead(o)}${keys.map((k,j)=>{const c=get(o,k); let g="g"+(j%2); if(!c) return `<td class="cell na ${g}">·</td><td class="cell na ${g}">·</td><td class="cell na ${g}">·</td>`;
+      const byP=new Map(); for(const i of c.idx){ const pl=v("Platename",i); if(!byP.has(pl)) byP.set(pl,[]); byP.get(pl).push(C.well[i]); } // one line per plate, its wells comma-separated
+      const pls=[...byP.keys()]; if(c.idx.length>1) g+=" multi"; // N > 1: slightly darker
+      return `<td class="cell wid pl ${g}" data-wi="${c.idx.join(",")}">${pls.map(esc).join("<br>")}</td><td class="cell wid wl ${g}" data-wi="${c.idx.join(",")}">${pls.map(pl=>esc(byP.get(pl).join(", "))).join("<br>")}</td><td class="cell wid wn ${g}" data-wi="${c.idx.join(",")}">${c.idx.length}</td>`;}).join("")}</tr>`).join("")}</tbody></table></div>`;
+}
+/* ---------- MFI boxplot by cell line and dose (individual wells, no averaging) ---------- */
+const DOSE_L=["#86b6ef","#6da7ec","#5598e7","#3987e5","#2a78d6","#256abf","#1c5cab","#104281"];
+const DOSE_D=["#184f95","#1c5cab","#256abf","#2a78d6","#3987e5","#5598e7","#6da7ec","#86b6ef"];
+function quant(s,p){ const h=(s.length-1)*p, lo=Math.floor(h), hi=Math.ceil(h); return s[lo]+(s[hi]-s[lo])*(h-lo); }
+function drawBox(r){
+  const el=$("#boxChart"); if(!el) return;
+  const wells=r.filter(i=>C.gmfi[i]>0);
+  if(!wells.length){ el.innerHTML=`<div class="empty">No wells to plot.</div>`; return; }
+  const lines=[...new Set(wells.map(i=>v("target_spec_name",i)))].sort(clSort);
+  const doseIdx=[...new Set(wells.map(i=>C.probe_conc[i]))].sort((a,b)=>parseFloat(D.probe_conc[a])-parseFloat(D.probe_conc[b]));
+  const doses=doseIdx.map(k=>D.probe_conc[k]);
+  const P=isDark()?DOSE_D:DOSE_L;
+  const dcol=d=>{ const k=doses.indexOf(d); return doses.length===1?P[4]:P[Math.round(k*(P.length-1)/(doses.length-1))]; };
+  // groups
+  const G=[];
+  for(const cl of lines) for(const d of doses){
+    const w=wells.filter(i=>v("target_spec_name",i)===cl && v("probe_conc",i)===d); if(!w.length) continue;
+    G.push({cl,d,w});
+  }
+  const BW=28, GAP=18, CGAP=18, m={l:62,r:16,t:14,b:130};
+  let x=m.l+96; // room for the first rotated label
+  G.forEach((g,k)=>{ if(k>0 && G[k-1].cl!==g.cl) x+=CGAP; g.x=x+BW/2; x+=BW+GAP; });
+  const W=Math.max(el.clientWidth||900, x+m.r), H=470;
+  const all=wells.map(i=>C.gmfi[i]);
+  const lo=Math.floor(Math.log10(Math.min(...all))), hi=Math.ceil(Math.log10(Math.max(...all)));
+  const Y=v=>H-m.b-(Math.log10(v)-lo)/((hi-lo)||1)*(H-m.t-m.b);
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="MFI boxplot by cell line and dose" style="max-width:none;width:${W}px;height:${H}px">`;
+  for(let e=lo;e<=hi;e++){ const y=Y(10**e); s+=`<line x1="${m.l}" x2="${W-m.r}" y1="${y}" y2="${y}" style="stroke:var(--line)"/><text x="${m.l-8}" y="${y+3.5}" text-anchor="end" class="bx-ax">${tickLab(10**e)}</text>`; }
+  s+=`<text class="bx-title" transform="translate(14 ${(m.t+H-m.b)/2}) rotate(-90)" text-anchor="middle">MFI (log scale)</text>`;
+  G.forEach(g=>{ s+=`<line x1="${g.x}" x2="${g.x}" y1="${H-m.b}" y2="${H-m.b+5}" style="stroke:var(--ink-3)"/><text transform="translate(${g.x+4} ${H-m.b+12}) rotate(-45)" text-anchor="end" class="bx-lab">${esc(g.cl)} × ${esc(g.d)}</text>`; });
+  s+=`<line x1="${m.l}" x2="${W-m.r}" y1="${H-m.b}" y2="${H-m.b}" style="stroke:var(--ink-3)"/>`;
+  G.forEach((g,gi)=>{
+    const c=dcol(g.d);
+    g.w.forEach((i,k)=>{ const j=((i*2654435761)%1000)/1000-0.5; s+=`<circle cx="${(g.x+j*BW*0.7).toFixed(1)}" cy="${Y(C.gmfi[i]).toFixed(1)}" r="2.6" style="fill:${c};stroke:var(--surface)" stroke-width="0.8" fill-opacity=".85" data-i="${i}"/>`; });
+  });
+  s+=`</svg>`;
+  el.innerHTML=`<div class="legend" style="margin-bottom:8px"><span class="eyebrow" style="margin-right:4px">Dose</span>${doses.map(d=>`<span class="li"><span class="sw" style="background:${dcol(d)}"></span>${esc(d)}</span>`).join("")}</div><div class="tscroll" style="border:0">${s}</div>`;
+  const svg=el.querySelector("svg");
+  svg.addEventListener("mouseover",e=>{ const t=e.target;
+    if(t.dataset.i!=null){ const i=+t.dataset.i; showTip(e,`<b>${esc(v("probe_name",i))}</b><br>${esc(v("target_spec_name",i))} · ${esc(v("probe_conc",i))}<br><span class="k">MFI</span> ${fmt(C.gmfi[i])}<br><span class="k">Plate</span> ${esc(v("Platename",i))} · ${esc(C.well[i])}`); }
+ });
+  svg.addEventListener("mousemove",e=>{ if(!tip.hidden) moveTip(e); });
+  svg.addEventListener("mouseout",hideTip);
+}
+
+/* ---------- titration line plots: one panel per cell line, one line per probe ---------- */
+function drawLines(r){
+  const el=$("#boxChart"); if(!el) return;
+  const wells=r.filter(i=>C.gmfi[i]>0);
+  if(!wells.length){ el.innerHTML=`<div class="empty">No wells to plot.</div>`; return; }
+  const q=st.q.trim().toLowerCase();
+  const lines=[...new Set(wells.map(i=>v("target_spec_name",i)))].sort(clSort);
+  const concs=[...new Set(wells.map(i=>C.conc[i]))].filter(c=>c>0).sort((a,b)=>a-b);
+  const all=wells.map(i=>C.gmfi[i]);
+  let lo, hi;
+  const W=360,H=260,m={l:48,r:12,t:10,b:40};
+  const cx0=Math.log10(concs[0]), cx1=Math.log10(concs[concs.length-1]);
+  const X=c=>m.l+(Math.log10(c)-cx0)/((cx1-cx0)||1)*(W-m.l-m.r);
+  const Y=v=>H-m.b-(Math.log10(v)-lo)/((hi-lo)||1)*(H-m.t-m.b);
+  const S=new Map(); // key -> series
+  for(const i of wells){ if(!(C.conc[i]>0)) continue;
+    const key=v("target_spec_name",i)+"@@"+v("probe_name",i); let o=S.get(key);
+    if(!o){ o={key,cl:v("target_spec_name",i),probe:v("probe_name",i),ctrl:false,by:new Map()}; S.set(key,o); }
+    if(isCtrl(i)) o.ctrl=true;
+    const c=C.conc[i]; if(!o.by.has(c)) o.by.set(c,[]); o.by.get(c).push(val(i)); }
+  // same values as the Response table heatmap: mean of the wells in each probe × cell line × dose cell
+  for(const o of S.values()){ o.pts=[...o.by.entries()].map(([c,a])=>({c,m:mean(a),n:a.length})).sort((a,b)=>a.c-b.c); o.hit=false; }
+  // fixed y-axis: min and max of the plotted (heatmap) values over every probe and cell line for this
+  // experiment type + dosing schedule, so it does not move when cell line / assembly / search change
+  { const A=new Map(); for(const i of base()){ if(!(C.conc[i]>0) || !(val(i)>0)) continue; const k=v("target_spec_name",i)+"@@"+v("probe_name",i)+"@@"+C.conc[i]; const a=A.get(k)||[]; a.push(val(i)); A.set(k,a); }
+    const M=[...A.values()].map(mean); lo=Math.log10(Math.min(...M)); hi=Math.log10(Math.max(...M)); if(hi<=lo) hi=lo+1; }
+  const kind=o=>o.hit?"hit":o.ctrl?"ref":"smp";
+  const sty={smp:"stroke:var(--s1);stroke-opacity:.35;stroke-width:1.2",ref:"stroke:var(--s2);stroke-opacity:.95;stroke-width:2",hit:"stroke:var(--ink);stroke-opacity:1;stroke-width:2.2"};
+  const panels=lines.map(cl=>{
+    const ser=[...S.values()].filter(o=>o.cl===cl).sort((a,b)=>({smp:0,ref:1,hit:2}[kind(a)]-{smp:0,ref:1,hit:2}[kind(b)]));
+    let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="MFI vs concentration for ${esc(cl)}">`;
+    const ticks=[10**lo]; for(let e=Math.ceil(lo);e<=Math.floor(hi);e++){ if(Math.abs(e-lo)>0.15 && Math.abs(hi-e)>0.15) ticks.push(10**e); } ticks.push(10**hi);
+    for(const tv of ticks){ const e=Math.log10(tv); const y=Y(tv); s+=`<line x1="${m.l}" x2="${W-m.r}" y1="${y}" y2="${y}" style="stroke:var(--line)"/><text x="${m.l-6}" y="${y+3.5}" text-anchor="end" class="bx-ax">${Number.isInteger(+e.toFixed(6))?tickLab(10**Math.round(e)):tickLab(+tv.toPrecision(2))}</text>`; }
+    concs.forEach(c=>{ s+=`<text x="${X(c)}" y="${H-m.b+14}" text-anchor="middle" class="bx-ax">${fmtC(c)}</text>`; });
+    s+=`<text x="${(m.l+W-m.r)/2}" y="${H-6}" text-anchor="middle" class="bx-title">Probe concentration (µg/mL, log scale)</text>`;
+    s+=`<text class="bx-title" transform="translate(11 ${(m.t+H-m.b)/2}) rotate(-90)" text-anchor="middle">MFI</text>`;
+    ser.forEach(o=>{ const d=o.pts.map((p,k)=>(k?"L":"M")+X(p.c).toFixed(1)+","+Y(p.m).toFixed(1)).join("");
+      s+=`<path d="${d}" fill="none" style="${sty[kind(o)]}"/>`;
+      o.pts.forEach(p=>{ const col=kind(o)==="ref"?"var(--s2)":"var(--s1)"; s+= p.n>1
+        ? `<circle cx="${X(p.c).toFixed(1)}" cy="${Y(p.m).toFixed(1)}" r="2.6" style="fill:var(--surface);stroke:${col}" stroke-width="1.4"/>`
+        : `<circle cx="${X(p.c).toFixed(1)}" cy="${Y(p.m).toFixed(1)}" r="1.8" style="fill:${col}" fill-opacity="${kind(o)==="smp"?.6:1}"/>`; });
+      s+=`<path d="${d}" fill="none" stroke="transparent" stroke-width="8" data-k="${esc(o.key)}" style="cursor:default"/>`; });
+    s+=`</svg>`;
+    return `<div class="lp"><div class="lp-h">${esc(cl)} <span>${ser.length} probes</span></div>${s}</div>`;
+  }).join("");
+  el.innerHTML=`<div class="legend" style="margin-bottom:8px"><span class="li"><span class="sw" style="background:var(--s1);opacity:.6;border-radius:0;height:3px;width:16px"></span>Sample probe</span><span class="li"><span class="sw" style="background:var(--s2);border-radius:0;height:3px;width:16px"></span>Reference control</span><span class="li"><span class="sw" style="background:transparent;border:1.5px solid var(--s1);width:8px;height:8px"></span>Average of more than one well (*)</span></div><div class="lp-grid">${panels}</div>`;
+  el.querySelectorAll("path[data-k]").forEach(p=>{
+    p.addEventListener("mouseenter",e=>{ const o=S.get(p.dataset.k); showTip(e,`<b>${esc(o.probe)}</b> · ${esc(o.cl)}<br>${o.pts.map(x=>`<span class="k">${fmtC(x.c)} µg/mL</span> ${fmt(x.m)}${x.n>1?`* (mean of ${x.n})`:""}`).join("<br>")}`); p.previousElementSibling&&p.previousElementSibling.tagName==="path"&&(p.previousElementSibling.style.strokeWidth="3"); });
+    p.addEventListener("mousemove",moveTip);
+    p.addEventListener("mouseleave",()=>{ hideTip(); const s=p.previousElementSibling; if(s&&s.tagName==="path") s.style.strokeWidth=""; });
+  });
+}
+
+/* ---------- wells table ---------- */
+const WCOLS=[["plate","Plate",i=>v("Platename",i)],["well","Well",i=>C.well[i]],["date","Run date",i=>v("date",i)],["project","Project name",i=>v("project_name",i)],
+  ["target","Cell line",i=>v("target_spec_name",i)],["probe","Probe",i=>v("probe_name",i)],["role","Role",i=>v("Primary Role",i)],["dose","Dose type",i=>v("dose_type",i)],
+  ["pconc","Probe conc",i=>v("probe_conc",i)],["ch","Channel",i=>v("mfi_channel",i)],["gmfi","MFI",i=>C.gmfi[i],"num"],
+  ["log10","Log10 MFI",i=>C.log10[i],"num"],["viable","Viable events",i=>C.viable[i],"num"]];
+function renderWells(r){
+  if(!$("#wellsTable")) return;
+  // plate / well / project dropdowns; each list reflects the other two choices
+  const WF=[["plate","Plate","Platename",i=>v("Platename",i)],["well","Well","well",i=>C.well[i]],["project","Project name","project_name",i=>v("project_name",i)]];
+  const pass=(i,skip)=>WF.every(([k,,,g])=>k===skip || !st.wf[k] || g(i)===st.wf[k]);
+  WF.forEach(([k,,,g])=>{ const opts=new Set(r.filter(i=>pass(i,k)).map(g)); if(st.wf[k] && !opts.has(st.wf[k])) st.wf[k]=""; });
+  $("#wellsFilters").innerHTML = WF.map(([k,lab,,g])=>{ const opts=[...new Set(r.filter(i=>pass(i,k)).map(g))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+    return `<div class="field"><label for="wf-${k}">${lab}</label><select id="wf-${k}" data-wf="${k}"><option value="">All (${opts.length})</option>${opts.map(x=>`<option ${x===st.wf[k]?"selected":""}>${esc(x)}</option>`).join("")}</select></div>`; }).join("");
+  $("#wellsFilters").querySelectorAll("select").forEach(s=>s.addEventListener("change",e=>{ st.wf[e.target.dataset.wf]=e.target.value; st.page=0; st.hpage=0; st.xpage=0; renderWells(rows()); }));
+  r = r.filter(i=>pass(i,null));
+  const s=st.wsort, col=WCOLS.find(c=>c[0]===s.k);
+  const sorted=r.slice().sort((a,b)=>{ const p=col[2](a), q=col[2](b); const x= typeof p==="string"? p.localeCompare(q,undefined,{numeric:true}) : p-q; return s.dir==="asc"?x:-x; });
+  const P=15, pages=Math.max(1,Math.ceil(sorted.length/P)); st.page=Math.min(st.page,pages-1);
+  const pg=sorted.slice(st.page*P,(st.page+1)*P);
+  $("#wellsTable").innerHTML=`<table id="wTable"><thead><tr>${WCOLS.map(c=>`<th class="${c[3]||""}" data-k="${c[0]}" ${s.k===c[0]?`data-dir="${s.dir}"`:""}>${/MFI/.test(c[1])?`<span style="text-transform:none">${c[1]}</span>`:c[1]}</th>`).join("")}</tr></thead>
+    <tbody>${pg.map(i=>`<tr>${WCOLS.map(c=>{const x=c[2](i); return `<td class="${c[3]||""} ${c[0]==="plate"?"mono":c[0]==="project"?"mono trunc":""}">${c[3]==="num"?(c[0]==="conc"?fmtC(x):c[0]==="viable"||c[0]==="total"?x.toLocaleString():fmt(x)):esc(c[0]==="probe"?shortProbe(x):x)}</td>`}).join("")}</tr>`).join("")}</tbody></table>`;
+  $("#wellsPager").innerHTML=`<button class="btn" id="wPrev" ${st.page===0?"disabled":""}>Previous</button><span>Rows ${sorted.length?st.page*P+1:0}–${Math.min(sorted.length,(st.page+1)*P)} of ${sorted.length} · page ${st.page+1} of ${pages}</span><button class="btn" id="wNext" ${st.page>=pages-1?"disabled":""}>Next</button>`;
+  $("#wPrev").onclick=()=>{st.page--;renderWells(rows());}; $("#wNext").onclick=()=>{st.page++;renderWells(rows());};
+  bindSort("#wTable", st.wsort, ()=>{st.page=0; st.hpage=0; st.xpage=0;renderWells(rows());});
+}
+
+/* ---------- orchestration ---------- */
+function renderMain(){
+  let r=rows();
+  { // dose filter for both schedules; default: fixed dose -> first dose, titration -> All
+    st.doseList=[...new Set(facet("d").map(i=>C.probe_conc[i]))].sort((a,b)=>parseFloat(D.probe_conc[a])-parseFloat(D.probe_conc[b])).map(k=>D.probe_conc[k]);
+    st.dose = pruneSel(st.dose, st.doseList); // default: All
+    if(!isAll(st.dose)) r=r.filter(i=>st.dose.includes(v("probe_conc",i)));
+    $("#fDose").innerHTML=`<button type="button" class="cbtn" data-d="*" aria-pressed="${isAll(st.dose)}">Show all</button>${st.doseList.map(d=>`<button type="button" class="cbtn" data-d="${esc(d)}" aria-pressed="${onSel(st.dose,d)}">${esc(d)}</button>`).join("")}<button type="button" class="cbtn hideall" data-d="__none__" aria-pressed="${isNone(st.dose)}">Hide all</button>`;
+  }
+  { const PB=pjBase(); const pj=[...new Set(PB.map(i=>v("project_name",i)))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+    if(Array.isArray(st.pj) && pj.length){ const a=st.pj.filter(x=>pj.includes(x)); st.pj=a.length?a:""; }
+    { const info=x=>{ const w=PB.filter(i=>v("project_name",i)===x||x===""); const cl=[...new Set(w.map(i=>v("target_spec_name",i)))].sort(clSort), pl=new Set(w.map(i=>v("Platename",i))), dt=[...new Set(w.map(i=>v("date",i)))].sort();
+      const clTxt=cl.length>2?`${cl[0]} + ${cl.length-1} more`:cl.join(", ");
+      return [clTxt, dt.length===1?`Run ${dt[0]}`:dt.length?`Runs ${dt[0]} – ${dt[dt.length-1]}`:"", `${cl.length} cell line${cl.length===1?"":"s"}`, `${pl.size} plate${pl.size===1?"":"s"}`].filter(Boolean).join(" · "); };
+      $("#fProjB").innerHTML=[["","All projects"],...pj.map(x=>[x,x])].map(([k,lab])=>`<button type="button" class="pcard" data-pj="${esc(k)}" aria-pressed="${k?onSel(st.pj,k):isAll(st.pj)}"><b>${esc(lab)}</b><span>${esc(info(k))}</span></button>`).join(""); }
+    if(!isAll(st.pj)) r=r.filter(i=>st.pj.includes(v("project_name",i))); }
+  $("#probeCount").textContent = `(N = ${new Set(r.map(i=>C.probe_name[i])).size.toLocaleString()})`;
+  { let x=rows();
+    if(!isAll(st.dose)) x=x.filter(i=>st.dose.includes(v("probe_conc",i)));
+    if(!isAll(st.pj)) x=x.filter(i=>st.pj.includes(v("project_name",i)));
+    if(st.plate) x=x.filter(i=>v("Platename",i)===st.plate);
+    XR=x; }
+  GR=r; { const b=$("#pxcDl"); if(b) b.disabled=!r.length; }
+  VIEW=[];
+  if(!r.length) $("#main").innerHTML=`<div class="panel empty">No wells match these filters. Clear the probe search or pick another project.</div>`;
+  else if(st.ds==="titration") renderTitrationHM(r); else renderFixed(r);
+  // alternate dark/light shading of the Probe column, switching each time the probe changes
+  $("#main").querySelectorAll("table.hm tbody").forEach(tb=>{ let prev=null, on=false; tb.querySelectorAll("td.rowlab").forEach(td=>{ const t=td.textContent; if(t!==prev){ if(prev!==null) on=!on; prev=t; } td.classList.toggle("band",on); let n=td.nextElementSibling; while(n && n.classList.contains("dosecol")){ n.classList.toggle("band",on); n=n.nextElementSibling; } }); });
+ // all wells for the experiment type + dosing schedule
+  renderWells(r); renderCart(); markDrops(); if(st.view==="drop") loadDropList();
+  document.querySelectorAll("#main svg.gplot").forEach(g=>{ { // dot tooltips
+      g.addEventListener("mouseover",e=>{ const a=e.target.closest("[data-ag]"); if(a){ const ix=a.dataset.ag.split(",").map(Number), i=ix[0];
+          showTip(e,`<b>${esc(v("probe_name",i))}</b><br>${esc(v("target_spec_name",i))} · ${esc(v("probe_conc",i))}<br><span class="k">Average MFI</span> ${fmt(mean(ix.map(j=>C.gmfi[j])))}* <span class="k">(${ix.length} wells)</span>`+ix.map(j=>`<br><span class="k">${esc(v("Platename",j))} · ${esc(C.well[j])}</span> ${fmt(C.gmfi[j])}`).join("")); return; }
+        const t=e.target.closest("[data-i]"); if(!t) return; const i=+t.dataset.i;
+        showTip(e,`<b>${esc(v("probe_name",i))}</b><br>${esc(v("target_spec_name",i))} · ${esc(v("probe_conc",i))}<br><span class="k">MFI</span> ${fmt(C.gmfi[i])}<br><span class="k">${esc(v("Platename",i))} · ${esc(C.well[i])}</span><br><span class="k">${esc(v("project_name",i))}</span>`); });
+      g.addEventListener("mousemove",e=>{ if(e.target.closest("[data-i],[data-ag]")) moveTip(e); });
+      g.addEventListener("mouseout",e=>{ if(e.target.closest("[data-i],[data-ag]")) hideTip(); }); } });
+}
+function renderAll(){ renderNav(); renderFilters(); renderMain(); }
+$("#tabsEt").addEventListener("click",e=>{const b=e.target.closest("[data-et]"); if(!b) return; st.et=b.dataset.et; st.target=null; st.asm=null; st.dose=""; st.hideCL=new Set(); st.hideD=new Set(); st.sel=[]; st.cleared=false; st.page=0; st.hpage=0; st.xpage=0; save(); renderAll();});
+$("#tabsDs").addEventListener("click",e=>{const b=e.target.closest("[data-ds]"); if(!b) return; st.ds=b.dataset.ds; st.target=null; st.asm=null; st.dose=""; st.hideCL=new Set(); st.hideD=new Set(); st.sel=[]; st.cleared=false; st.page=0; st.hpage=0; st.xpage=0; save(); renderAll();});
+$("#fDose").addEventListener("click",e=>{const b=e.target.closest("[data-d]"); if(!b) return; st.dose=toggleSel(st.dose,b.dataset.d); st.hpage=0; st.xpage=0; renderFilters(); renderMain();});
+$("#fAsm").addEventListener("click",e=>{const b=e.target.closest("[data-a]"); if(!b) return; st.asm=toggleSel(st.asm,b.dataset.a); st.sel=[]; st.cleared=false; st.page=0; st.hpage=0; st.xpage=0; renderFilters(); renderMain();});
+$("#fTarget").addEventListener("click",e=>{const b=e.target.closest("[data-t]"); if(!b) return; st.target=toggleSel(st.target,b.dataset.t); st.sel=[]; st.cleared=false; st.page=0; st.hpage=0; st.xpage=0; renderFilters(); renderMain();});
+
+/* ---------- data cart: add the wells in the current view, download as CSV ---------- */
+/* Replicate and Ave MFI for the cart CSV: wells are grouped like a heatmap cell when replicates are averaged within a project
+   (same experiment type, dosing schedule, project, probe, cell line and dose); replicates are numbered Rep1, Rep2, ... by plate
+   then well, and Ave MFI is the mean MFI of the wells in the group (a single well is Rep1 and its own MFI) */
+/* wells in the Drop list (dropped(p,i) true) are left out first, so they are neither numbered nor averaged */
+function repInfo(p, dropped){ const R=RAWS[p]; if(!R) return new Map();
+  const dd=R.dicts, cc=R.cols, g=new Map(), nc=(a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true});
+  for(let i=0;i<R.n;i++){ if(dropped && dropped(p,i)) continue; const k=["experiment_type","dosing_schedule","project_name","probe_name","target_spec_name","probe_conc"].map(x=>cc[x][i]).join("|"); if(!g.has(k)) g.set(k,[]); g.get(k).push(i); }
+  const out=new Map();
+  for(const ix of g.values()){ ix.sort((a,b)=> nc(dd.Platename[cc.Platename[a]],dd.Platename[cc.Platename[b]]) || nc(cc.well[a],cc.well[b]));
+    const vals=ix.map(i=>cc.gmfi[i]).filter(x=>x!=null&&!isNaN(x)); const ave=vals.length?mean(vals):null;
+    ix.forEach((i,k)=>out.set(i,{rep:"Rep"+(k+1), ave})); }
+  return out; }
+const CART_COLS=[["Study",null],["project_name","project_name"],["Platename","Platename"],["well","well"],["Run date","date"],["experiment_type","experiment_type"],["dosing_schedule","dosing_schedule"],["target_spec_name","target_spec_name"],["probe_name","probe_name"],["Probe ID","Probe ID"],["Primary Role","Primary Role"],["probe_conc","probe_conc"],["mfi_channel","mfi_channel"],["MFI","gmfi"]];
+function cartVal(p,i,k){ const R=RAWS[p]; if(k===null) return p; const x=R.cols[k][i]; return R.dicts[k] ? R.dicts[k][x] : x; }
+function renderCart(){ $("#cartInfo").textContent=`Cart: ${CART.size.toLocaleString()} well${CART.size===1?"":"s"}`; $("#cartDl").disabled=!CART.size||!DL; $("#cartClr").disabled=!CART.size;
+  $("#cartAdd").textContent=`Add view to cart (${VIEW.length.toLocaleString()})`; $("#cartAdd").disabled=!VIEW.length; }
+var DL=null; (async()=>{ try{ DL = window.claude && window.claude.use ? await window.claude.use("downloads") : null; }catch(e){ DL=null; }
+  if(!DL) DL={ save:async({filename,data})=>{ const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([data],{type:"text/csv"})); a.download=filename; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },1000); } }; // plain browser download
+  setTimeout(()=>{ renderCart(); renderDrop(); }); })();
+$("#cartAdd").addEventListener("click",()=>{ const before=CART.size; for(const i of VIEW) CART.set(PROJ+":"+i,[PROJ,i]); $("#cartMsg").textContent=`+${(CART.size-before).toLocaleString()} added`; renderCart(); });
+$("#cartClr").addEventListener("click",()=>{ CART.clear(); $("#cartMsg").textContent=""; renderCart(); });
+$("#cartDl").addEventListener("click",async()=>{ if(!DL||!CART.size) return;
+  const q=x=>{ const t=x==null?"":String(x); return /[",\n]/.test(t)?'"'+t.replace(/"/g,'""')+'"':t; };
+  const d=new Date(), pd=x=>String(x).padStart(2,"0");
+  const date=`${d.getFullYear()}-${pd(d.getMonth()+1)}-${pd(d.getDate())}`, time=`${pd(d.getHours())}:${pd(d.getMinutes())}:${pd(d.getSeconds())}`;
+  // the current Drop list (00-drop-folder/to-drop-wells_cummulative.csv, read fresh): its wells (plate + well) are removed
+  // from the download before replicates and averages are worked out
+  let dropSet=new Set();
+  try{ const {rows}=await readDropFile(await dropFileHandle(false));
+    if(rows.length){ const h=rows[0].map(x=>String(x).trim()), ip=h.indexOf("Platename"), iw=h.indexOf("well");
+      if(ip<0||iw<0){ $("#cartMsg").textContent=`Not downloaded: ${CUM_FILE} has no Platename / well columns`; return; }
+      for(const r of rows.slice(1)) dropSet.add(String(r[ip]??"").trim()+"|"+String(r[iw]??"").trim()); } }
+  catch(e){ if(e.name!=="NotFoundError"&&e.name!=="NoFolder"){ $("#cartMsg").textContent=`Not downloaded: could not read the Drop list (${e.name})`; return; } }
+  const dropped=(p,i)=>dropSet.has(String(cartVal(p,i,"Platename")).trim()+"|"+String(cartVal(p,i,"well")).trim());
+  const reps=new Map(), repsOf=p=>{ if(!reps.has(p)) reps.set(p,repInfo(p,dropped)); return reps.get(p); };
+  // layout of the plate export (e.g. 2026-10-20_pHrodo-…csv), without its "duplicates" column, then Replicate, Ave MFI, Date, Time
+  const rv=(p,i,k)=>{ const R=RAWS[p], x=R&&R.cols[k]?R.cols[k][i]:null; return x==null?"":(R.dicts[k]?R.dicts[k][x]:x); };
+  const EXPR={binding_expr:"binding", intern_expr:"internalization"};
+  const unitOf=(p,i)=>{ const m=String(rv(p,i,"probe_conc")).match(/\(([^)]*)\)\s*$/); return m?m[1].trim():""; };
+  const units=new Set([...CART.values()].filter(([p,i])=>!dropped(p,i)).map(([p,i])=>unitOf(p,i)));
+  const oneUnit=units.size===1?[...units][0]:null;
+  const qs=x=>'"'+String(x??"").replace(/"/g,'""')+'"', qn=x=>x==null||x===""||isNaN(x)?"NA":String(x);
+  const head=["platename","position","expr_type","dose_type","target_spec_name","probe_name",oneUnit?`conc (${oneUnit})`:"conc",...(oneUnit!=null?[]:["conc_unit"]),"mfi","notes"];
+  const lines=[[...head.map(qs),...["Replicate","Ave MFI","Date","Time"].map(qs)].join(",")];
+  let nDrop=0;
+  for(const [p,i] of CART.values()){ if(dropped(p,i)){ nDrop++; continue; } const ri=repsOf(p).get(i)||{rep:"Rep1",ave:null};
+    const et=String(rv(p,i,"experiment_type")), mfi=rv(p,i,"gmfi");
+    lines.push([qs(rv(p,i,"Platename")), qs(rv(p,i,"well")), qs(EXPR[et]||et), qs(rv(p,i,"dose_type")), qs(rv(p,i,"target_spec_name")), qs(rv(p,i,"probe_name")),
+      qn(rv(p,i,"conc")), ...(oneUnit!=null?[]:[qs(unitOf(p,i))]), mfi===""?"NA":String(Math.round(mfi)), qs(rv(p,i,"notes")||"NA"),
+      qs(ri.rep), ri.ave==null?"NA":ri.ave, qs(date), qs(time)].join(",")); }
+  const filename=`flow-data-cart-${new Date().toISOString().slice(0,10)}.csv`, data=lines.join("\n")+"\n";
+  // Chrome / Edge: a "Save as" window opens so you can choose the folder (and file name); other browsers download as usual
+  if(window.showSaveFilePicker){
+    // always open in the Downloads folder (no "id", so the browser does not jump back to the last-used folder)
+    try{ const opts={suggestedName:filename, startIn:"downloads", types:[{description:"CSV file", accept:{"text/csv":[".csv"]}}]};
+      let h; try{ h=await window.showSaveFilePicker(opts); }catch(e){ if(e.name==="AbortError") throw e; delete opts.startIn; h=await window.showSaveFilePicker(opts); }
+      const w=await h.createWritable(); await w.write(data); await w.close(); $("#cartMsg").textContent=`Saved as ${h.name}${nDrop?` (${nDrop} dropped well${nDrop===1?"":"s"} left out)`:""}`; }
+    catch(e){ $("#cartMsg").textContent = e.name==="AbortError" ? "Save cancelled" : `Could not save (${e.name})`; }
+    return; }
+  try{ await DL.save({filename, data}); $("#cartMsg").textContent="Downloaded"; }
+  catch(e){ $("#cartMsg").textContent = e&&e.code==="declined" ? "Download cancelled" : "Download not available"; } });
+$("#fProjB").addEventListener("click",e=>{const b=e.target.closest("[data-pj]"); if(!b) return; const k=b.dataset.pj; st.pj = k ? toggleSel(st.pj,k) : ""; if(st.pj==="*") st.pj=""; st.page=0; st.hpage=0; st.xpage=0; renderFilters(); renderMain();});
+$("#fProbe").addEventListener("input",e=>{st.q=e.target.value; st.sel=[]; st.cleared=false; st.page=0; st.hpage=0; st.xpage=0; renderFilters(); renderMain();});
+/* ---------- to-drop cart: wells picked from plots / heatmap rows; shared in the app (editors change it) ---------- */
+const DROP=new Map(); // "STUDY|plate|well" -> {study,plate,well,project,cell,probe,conc,mfi}
+let dropMode=false, dropTimer=null, dropUnsub=null;
+try{ for(const it of JSON.parse(localStorage.getItem("flow-drops")||"[]")) DROP.set(it.study+"|"+it.plate+"|"+it.well,it); }catch(e){}
+const wKey = i => PROJ+"|"+v("Platename",i)+"|"+C.well[i];
+function dropItem(i){ return {study:PROJ, plate:v("Platename",i), well:String(C.well[i]), project:v("project_name",i), cell:v("target_spec_name",i), probe:v("probe_name",i), conc:v("probe_conc",i), mfi:C.gmfi[i]}; }
+function canDrop(){ return !!(DBX && ASX); } // editors (assets is granted to editors only)
+function renderDrop(){ $("#dropInfo").textContent=`To drop: ${DROP.size.toLocaleString()} well${DROP.size===1?"":"s"}`; $("#dropDl").disabled=!DROP.size||!DL; $("#dropClr").disabled=!DROP.size||(DBX&&!canDrop());
+  $("#dropHide").disabled=!DROP.size&&!hideDrop; $("#dropHide").setAttribute("aria-pressed",String(hideDrop)); $("#dropHide").textContent=hideDrop?"Show":"Hide"; $("#dropHide").title=hideDrop?"Show the selected wells again":"Hide all selected wells from plots and tables";
+  $("#dropMode").setAttribute("aria-pressed",String(dropMode)); $("#dropMode").textContent=dropMode?"Selecting (click to stop)":"Select to drop"; document.body.classList.toggle("drop-mode",dropMode); }
+function markDrops(){ const has=i=>DROP.has(wKey(i));
+  document.querySelectorAll("#main svg.gplot [data-i]:not(rect)").forEach(el=>el.classList.toggle("dropped",has(+el.dataset.i)));
+  document.querySelectorAll("#main svg.gplot [data-ag]").forEach(el=>el.classList.remove("dropped")); /* bars are not highlighted; only the well dots */
+  document.querySelectorAll("#main td[data-wi]").forEach(td=>{ const ix=td.dataset.wi.split(",").map(Number); const n=ix.filter(has).length; td.classList.toggle("dropped",n>0); td.classList.toggle("dropped-all",n>0&&n===ix.length); });
+  document.querySelectorAll("#main tr[data-w]").forEach(tr=>{ const ix=tr.dataset.w?tr.dataset.w.split(",").map(Number):[]; const n=ix.filter(has).length; tr.classList.toggle("dropped",n>0); tr.classList.toggle("dropped-all",n>0&&n===ix.length); });
+  renderDrop(); }
+function saveDrops(){ if(!DBX){ try{ localStorage.setItem("flow-drops", JSON.stringify([...DROP.values()])); }catch(e){} return; } clearTimeout(dropTimer); dropTimer=setTimeout(async()=>{ try{ await DBX.doc("drops/list").set({items:[...DROP.values()], updatedAt:new Date().toISOString()}); $("#dropMsg").textContent="Saved"; }catch(e){ $("#dropMsg").textContent="Not saved ("+(e&&e.code||"error")+")"; } },500); }
+function toggleWells(ix){ if(!ix.length) return; const all=ix.every(i=>DROP.has(wKey(i)));
+  for(const i of ix){ const k=wKey(i); if(all) DROP.delete(k); else DROP.set(k,dropItem(i)); }
+  $("#dropMsg").textContent=(all?"−":"+")+ix.length+" well"+(ix.length===1?"":"s"); dropRefresh(); saveDrops(); }
+function dropRefresh(){ if(hideDrop && !$("#studyView").hidden){ st.hpage=0; st.xpage=0; renderFilters(); renderMain(); } markDrops(); }
+$("#dropHide").addEventListener("click",()=>{ hideDrop=!hideDrop; st.hpage=0; st.xpage=0; if(!$("#studyView").hidden){ renderFilters(); renderMain(); } markDrops(); });
+$("#dropMode").addEventListener("click",()=>{ if(DBX && !canDrop()){ $("#dropMsg").textContent="Only editors of this app can change the to-drop list."; return; } dropMode=!dropMode; renderDrop(); });
+$("#dropClr").addEventListener("click",()=>{ const b=$("#dropClr"); if(b.dataset.armed!=="1"){ b.dataset.armed="1"; b.textContent="Click again to clear"; setTimeout(()=>{ b.dataset.armed=""; b.textContent="Clear"; },4000); return; }
+  b.dataset.armed=""; b.textContent="Clear"; DROP.clear(); dropRefresh(); saveDrops(); });
+/* "Update drop list": add the wells in the to-drop list to <folder>/00-drop-folder/to-drop-wells_cummulative.csv,
+   stamped with the date and time of the click; wells already in the file (same Study, Platename, well) are not added again */
+const CUM_FILE="to-drop-wells_cummulative.csv";
+const CUM_HEAD=["Study","project_name","Platename","well","target_spec_name","probe_name","probe_conc","MFI","Date","Time"];
+function csvRows(text){ // RFC 4180: quoted fields, "" escapes
+  const rows=[]; let row=[], f="", q=false;
+  for(let i=0;i<text.length;i++){ const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){ f+='"'; i++; } else q=false; } else f+=c; continue; }
+    if(c==='"') q=true; else if(c===','){ row.push(f); f=""; } else if(c==='\n'){ row.push(f); rows.push(row); row=[]; f=""; } else if(c!=='\r') f+=c; }
+  if(f!==""||row.length){ row.push(f); rows.push(row); }
+  return rows.filter(r=>!(r.length===1&&r[0]===""));
+}
+/* "Drop list" tab: shows 00-drop-folder/to-drop-wells_cummulative.csv as it is on disk; rows can be ticked and removed from the file */
+let DLH=[], DLB=[], DLSEL=new Set(), DLARM=0, DLPAGE=0; const DLPS=15; // 15 rows per page
+let DLF={study:"",project:"",plate:""}, DLVIS=[]; // Drop list filters and the rows they let through
+async function dropFileHandle(write){ const F=window.FOLDER; if(!F||!F.dir) throw Object.assign(new Error("no folder"),{name:"NoFolder"});
+  const mode=write?"readwrite":"read";
+  if(F.dir.queryPermission && (await F.dir.queryPermission({mode}))!=="granted" && (await F.dir.requestPermission({mode}))!=="granted") throw Object.assign(new Error("denied"),{name:"NotAllowedError"});
+  return (await F.dir.getDirectoryHandle("00-drop-folder")).getFileHandle(CUM_FILE); }
+async function readDropFile(fh){ const file=await fh.getFile(); let text=await file.text(); if(text.charCodeAt(0)===0xFEFF) text=text.slice(1); return {file, rows:csvRows(text)}; }
+const dlErr=e=>{ const F=window.FOLDER; return e.name==="NoFolder" ? `Choose the project folder (Choose folder) to see 00-drop-folder/${CUM_FILE}.` : e.name==="NotFoundError" ? `No 00-drop-folder/${CUM_FILE} in ${F&&F.root}` : e.name==="NotAllowedError" ? "No permission to use the folder" : `Could not read ${CUM_FILE} (${e.name})`; };
+async function loadDropList(){ const box=$("#dropListBox"), info=$("#dlInfo"); if(!box||!info) return;
+  try{ const {file,rows}=await readDropFile(await dropFileHandle(false));
+    DLH=rows.length?rows[0]:CUM_HEAD.slice(); DLB=rows.slice(1); DLSEL=new Set([...DLSEL].filter(i=>i<DLB.length));
+    { const t=new Date(file.lastModified), p=x=>String(x).padStart(2,"0");
+      info.textContent=`${DLB.length} row${DLB.length===1?"":"s"} · last changed ${t.getFullYear()}-${p(t.getMonth()+1)}-${p(t.getDate())} ${p(t.getHours())}:${p(t.getMinutes())}:${p(t.getSeconds())}`;
+      info.appendChild(Object.assign(document.createElement("span"),{id:"dlCur"})); }
+    renderDropList();
+  }catch(e){ info.textContent=dlErr(e); DLH=[]; DLB=[]; DLSEL.clear(); box.innerHTML=""; renderDropList(); }
+}
+function renderDropList(){ const box=$("#dropListBox"); if(!box) return;
+  const fl=$("#dlFilters"); if(!DLH.length){ if(fl) fl.innerHTML=""; const b0=$("#dlRemove"); if(b0) b0.disabled=true; return; }
+  // dropdown filters: sana_project (Study), project name, plate name; each list reflects the other two choices
+  const FILT=[["study","sana_project",DLH.indexOf("Study")],["project","Project name",DLH.indexOf("project_name")],["plate","Plate name",DLH.indexOf("Platename")]].filter(f=>f[2]>=0);
+  // only rows for the projects selected and shown in the heatmaps (project cards of this study, experiment type and dosing schedule)
+  const ipj=DLH.indexOf("project_name"), CUR=new Set(pjBase().map(i=>v("project_name",i)).filter(x=>inSel(st.pj,x)));
+  const cur=i=> ipj<0 || CUR.has(String(DLB[i][ipj]??"").trim());
+  const nCur=DLB.reduce((a,_,i)=>a+(cur(i)?1:0),0), ci=$("#dlCur"); if(ci) ci.textContent=` · ${nCur} for the current project${CUR.size===1?"":"s"}`;
+  for(const i of [...DLSEL]) if(!cur(i)) DLSEL.delete(i);
+  const btn=$("#dlRemove"); if(btn){ btn.disabled=!DLSEL.size; if(!DLARM) btn.textContent=DLSEL.size?`Remove selected rows (${DLSEL.size})`:"Remove selected rows"; }
+  const pass=(i,skip)=>cur(i) && FILT.every(([k,,c])=>k===skip || !DLF[k] || DLB[i][c]===DLF[k]);
+  FILT.forEach(([k,,c])=>{ if(DLF[k] && !DLB.some((rw,i)=>pass(i,k) && rw[c]===DLF[k])) DLF[k]=""; });
+  if(fl){ fl.innerHTML=FILT.map(([k,lab,c])=>{ const opts=[...new Set(DLB.filter((_,i)=>pass(i,k)).map(rw=>rw[c]??""))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+      return `<div class="field"><label for="dlf-${k}">${lab}</label><select id="dlf-${k}" data-dlf="${k}"><option value="">All (${opts.length})</option>${opts.map(x=>`<option ${x===DLF[k]?"selected":""}>${esc(x)}</option>`).join("")}</select></div>`; }).join("");
+    fl.querySelectorAll("select").forEach(sel=>sel.onchange=()=>{ DLF[sel.dataset.dlf]=sel.value; DLPAGE=0; DLARM=0;
+      const ok=new Set(DLB.map((_,i)=>i).filter(i=>pass(i,null))); for(const i of [...DLSEL]) if(!ok.has(i)) DLSEL.delete(i); // only rows you can see stay selected
+      renderDropList(); }); }
+  DLVIS=DLB.map((_,i)=>i).filter(i=>pass(i,null));
+  const n=DLVIS.length, pages=Math.max(1,Math.ceil(n/DLPS)); DLPAGE=Math.min(Math.max(DLPAGE,0),pages-1);
+  const from=DLPAGE*DLPS, pageIdx=DLVIS.slice(from,from+DLPS);
+  const all=pageIdx.length>0 && pageIdx.every(i=>DLSEL.has(i));
+  const pg=$("#dlPager"); if(pg) pg.innerHTML = n>DLPS ? `<button class="btn" data-dlp="-1" ${DLPAGE===0?"disabled":""}>Previous</button><span>Rows ${from+1}–${Math.min(n,from+DLPS)} of ${n} · page ${DLPAGE+1} of ${pages}</span><button class="btn" data-dlp="1" ${DLPAGE>=pages-1?"disabled":""}>Next</button>` : "";
+  const empty = !DLB.length ? "No wells in the drop list yet." : !nCur ? "No wells in the drop list for the current projects." : "No rows match these filters.";
+  box.innerHTML=`<table><thead><tr><th class="nosort"><input type="checkbox" data-dlall aria-label="Select all rows on this page" ${all?"checked":""}></th>${DLH.map(h=>`<th class="nosort">${esc(h)}</th>`).join("")}</tr></thead><tbody>${pageIdx.length?pageIdx.map(i=>[DLB[i],i]).map(([rw,i])=>`<tr data-dlrow="${i}" class="${DLSEL.has(i)?"sel":""}" style="cursor:pointer"><td><input type="checkbox" data-dlr="${i}" aria-label="Select row ${i+1}" ${DLSEL.has(i)?"checked":""}></td>${DLH.map((h,k)=>`<td class="${h==="MFI"?"num":""}">${esc(rw[k]??"")}</td>`).join("")}</tr>`).join(""):`<tr><td colspan="${DLH.length+1}" class="empty">${empty}</td></tr>`}</tbody></table>`;
+}
+async function removeDropRows(){
+  const msg=$("#dlMsg");
+  try{ const fh=await dropFileHandle(true); const {rows}=await readDropFile(fh); // re-read so edits made meanwhile are kept
+    const head=rows.length?rows[0]:CUM_HEAD.slice(), body=rows.slice(1);
+    const want=new Map(); for(const i of DLSEL){ const k=(DLB[i]||[]).join("\u0001"); want.set(k,(want.get(k)||0)+1); }
+    const keep=[], gone=[]; for(const rw of body){ const k=rw.join("\u0001"); if(want.get(k)>0){ want.set(k,want.get(k)-1); gone.push(rw); } else keep.push(rw); }
+    const q=x=>{ const t=x==null?"":String(x); return /[",\n]/.test(t)?'"'+t.replace(/"/g,'""')+'"':t; };
+    const text=[head,...keep].map(rw=>rw.map(q).join(",")).join("\n")+"\n";
+    const w=await fh.createWritable(); await w.write(text); await w.close();
+    // also unmark these wells in the app, so the next "Update drop list" does not add them back
+    const iS=head.indexOf("Study"), iP=head.indexOf("Platename"), iW=head.indexOf("well"); let un=0;
+    for(const rw of gone){ const k=(rw[iS]||"")+"|"+(rw[iP]||"")+"|"+(rw[iW]||""); if(DROP.delete(k)) un++; }
+    if(un){ dropRefresh(); saveDrops(); }
+    DLSEL.clear(); await loadDropList();
+    msg.textContent="";
+  }catch(e){ msg.textContent=dlErr(e); }
+}
+$("#dropDl").addEventListener("click",async()=>{ if(!DROP.size) return;
+  const q=x=>{ const t=x==null?"":String(x); return /[",\n]/.test(t)?'"'+t.replace(/"/g,'""')+'"':t; };
+  const d=new Date(), p=x=>String(x).padStart(2,"0");
+  const date=`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`, time=`${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+  const field={Study:"study",project_name:"project",Platename:"plate",well:"well",target_spec_name:"cell",probe_name:"probe",probe_conc:"conc",MFI:"mfi"};
+  const lineFor=(head,it)=>head.map(h=>h==="Date"?date:h==="Time"?time:q(field[h]?it[field[h]]:"")).join(",");
+  const F=window.FOLDER; let why="";
+  if(F && F.dir){ try{
+      if(F.dir.queryPermission && (await F.dir.queryPermission({mode:"readwrite"}))!=="granted" && (await F.dir.requestPermission({mode:"readwrite"}))!=="granted") throw Object.assign(new Error("denied"),{name:"NotAllowedError"});
+      const sub=await F.dir.getDirectoryHandle("00-drop-folder");
+      const fh=await sub.getFileHandle(CUM_FILE,{create:true});
+      let text=await (await fh.getFile()).text(); if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
+      const rows=csvRows(text); const head=rows.length?rows[0].map(h=>h.trim()):CUM_HEAD.slice();
+      if(!rows.length) text=CUM_HEAD.join(",");
+      const ix=n=>head.indexOf(n), iS=ix("Study"), iP=ix("Platename"), iW=ix("well");
+      const have=new Set(rows.slice(1).map(r=>(r[iS]||"")+"|"+(r[iP]||"")+"|"+(r[iW]||"")));
+      const add=[...DROP.values()].filter(it=>!have.has(it.study+"|"+it.plate+"|"+it.well));
+      if(add.length){
+        if(!/\n$/.test(text)) text+="\n";
+        text+=add.map(it=>lineFor(head,it)).join("\n")+"\n";
+        const w=await fh.createWritable(); await w.write(text); await w.close(); }
+      if(st.view==="drop") loadDropList();
+      $("#dropMsg").textContent=`drop-wells_cummulative.csv updated ${date} ${time}`; return;
+    }catch(e){ why = e.name==="NotFoundError" ? `No 00-drop-folder in ${F.root}` : e.name==="NotAllowedError" ? "No permission to save in the folder" : `Could not update ${CUM_FILE} (${e.name})`; } }
+  else why = window.showDirectoryPicker ? "Choose the project folder (Choose folder) to update the drop CSV" : "This browser cannot save into folders (use Chrome or Edge)";
+  const data=[CUM_HEAD.join(","),...[...DROP.values()].map(it=>lineFor(CUM_HEAD,it))].join("\n")+"\n";
+  try{ await DL.save({filename:`to-drop-wells_${date}_${time.replace(/:/g,"")}.csv`, data}); $("#dropMsg").textContent=why+"; downloaded instead"; }catch(e){ $("#dropMsg").textContent=why; } });
+// select mode: clicks on dots, bars, line points and heatmap rows add/remove their wells (capture phase, before other handlers)
+$("#main").addEventListener("click",e=>{ if(!dropMode) return;
+  // a dot = that well; a bar = its wells; a table cell = only the wells in that cell; the probe name = every well in the row
+  const t=e.target.closest("svg.gplot [data-i], svg.gplot [data-ag], td[data-wi], tbody tr[data-w] td.rowlab"); if(!t) return;
+  e.preventDefault(); e.stopPropagation();
+  const ids=x=>x?x.split(",").map(Number):[];
+  const ix = t.dataset.i!=null ? [+t.dataset.i] : t.dataset.ag ? ids(t.dataset.ag) : t.dataset.wi!=null ? ids(t.dataset.wi) : ids(t.closest("tr").dataset.w);
+  toggleWells(ix); },true);
+function startDropSync(){ if(!DBX||dropUnsub) return; dropUnsub=DBX.doc("drops/list").onSnapshot(snap=>{ const d=snap.exists?snap.data():null; DROP.clear(); for(const it of (d&&d.items)||[]) DROP.set(it.study+"|"+it.plate+"|"+it.well,it); dropRefresh(); },()=>{}); }
+setTimeout(function waitDb(){ if(DBX) startDropSync(); else setTimeout(waitDb,1000); },500);
+$("#main").addEventListener("click",e=>{
+  if(e.target.closest("[data-dlref]")){ DLSEL.clear(); $("#dlMsg").textContent=""; loadDropList(); return; }
+  if(e.target.closest("[data-dlrm]")){ const b=$("#dlRemove"); if(!DLSEL.size) return;
+    if(Date.now()-DLARM>4000){ DLARM=Date.now(); b.textContent=`Click again to remove ${DLSEL.size} row${DLSEL.size===1?"":"s"}`; setTimeout(()=>{ if(Date.now()-DLARM>=4000){ DLARM=0; renderDropList(); } },4100); return; }
+    DLARM=0; removeDropRows(); return; }
+  { const all=e.target.closest("[data-dlall]"); if(all){ const ix=DLVIS.slice(DLPAGE*DLPS,DLPAGE*DLPS+DLPS); ix.forEach(i=>all.checked?DLSEL.add(i):DLSEL.delete(i)); DLARM=0; renderDropList(); return; } }
+  { const pb=e.target.closest("[data-dlp]"); if(pb){ DLPAGE+=Number(pb.dataset.dlp); renderDropList(); return; } }
+  { const tr=e.target.closest("tr[data-dlrow]"); if(tr){ const i=+tr.dataset.dlrow; if(DLSEL.has(i)) DLSEL.delete(i); else DLSEL.add(i); DLARM=0; renderDropList(); return; } }
+  const ms=e.target.closest("[data-msort]"); if(ms){ const d=mfiSortDir();
+    if(!d){ const col=ALL_TGT.find(t=>facet().some(i=>v("target_spec_name",i)===t)); st.hsort=col?{k:"m:"+col,dir:"desc"}:st.hsort; }
+    else if(d==="desc") st.hsort={k:st.hsort.k,dir:"asc"}; else st.hsort={k:"proj",dir:"asc"};
+    st.hpage=0; st.xpage=0; renderMain(); return; }
+  const av=e.target.closest("[data-avg]"); if(av){ st.avg=!st.avg; st.hpage=0; st.xpage=0; renderMain(); return; }
+  const hd=e.target.closest("[data-hd]"); if(hd){ const k=hd.dataset.hd, H=st.hideD||(st.hideD=new Set());
+    if(k==="__all__") H.clear(); else if(k==="__none__") JSON.parse(hd.dataset.keys).forEach(x=>H.add(x)); else if(H.has(k)) H.delete(k); else H.add(k); st.hpage=0; st.xpage=0; renderFilters(); renderMain(); return; }
+  const hc=e.target.closest("[data-hcl]"); if(hc){ const k=hc.dataset.hcl, H=st.hideCL||(st.hideCL=new Set());
+    if(k==="__all__") H.clear(); else if(k==="__none__") JSON.parse(hc.dataset.keys).forEach(x=>H.add(x)); else if(H.has(k)) H.delete(k); else H.add(k); st.hpage=0; st.xpage=0; renderFilters(); renderMain(); return; }
+  const hs=e.target.closest("th[data-hs]"); if(hs){ const k=hs.dataset.hs; const s=st.hsort;
+    st.hsort = (s&&s.k===k) ? {k,dir:s.dir==="desc"?"asc":"desc"} : {k,dir:(k.startsWith("m:")||k.startsWith("n:"))?"desc":"asc"}; st.hpage=0; st.xpage=0; renderMain(); return; }
+  const gp=e.target.closest("[data-gp]"); if(gp){ st.gpage=(st.gpage||0)+(gp.dataset.gp==="next"?1:-1); renderMain(); return; }
+  const gs=e.target.closest("[data-gs]"); if(gs){ st.gscale=gs.dataset.gs; renderMain(); return; }
+  const xp=e.target.closest("[data-xp]"); if(xp){ st.xpage=(st.xpage||0)+(xp.dataset.xp==="next"?1:-1); renderMain(); return; }
+  const h=e.target.closest("[data-hp]"); if(h){ st.hpage=(st.hpage||0)+(h.dataset.hp==="next"?1:-1); renderMain(); return; }
+  const b=e.target.closest("[data-view]"); if(!b) return; st.view=b.dataset.view; renderMain();});
+let rz; addEventListener("resize",()=>{clearTimeout(rz); rz=setTimeout(renderMain,150);});
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change",renderMain);
+new MutationObserver(renderMain).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+/* ---------- theme toggle ---------- */
+const SUN='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>', MOON='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+function paintThemeBtn(){ const d=isDark(); document.querySelectorAll(".theme-btn").forEach(b=>b.innerHTML = d ? SUN+"Light mode" : MOON+"Dark mode"); }
+try{ const t=localStorage.getItem("sana01-theme"); if(t==="dark"||t==="light") document.documentElement.setAttribute("data-theme",t); }catch(e){}
+document.querySelectorAll(".theme-btn").forEach(btn=>btn.addEventListener("click",()=>{ const t=isDark()?"light":"dark"; document.documentElement.setAttribute("data-theme",t); try{ localStorage.setItem("sana01-theme",t); }catch(e){} paintThemeBtn(); }));
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change",paintThemeBtn);
+paintThemeBtn();
+/* ---------- cover page + study switching ---------- */
+const ETN={binding_expr:"Binding expression",intern_expr:"Internalization"};
+function renderCover(){
+  $("#coverMeta").innerHTML=`<span>${esc(META)}</span>`;
+  $("#studyCards").innerHTML=(Object.keys(RAWS).length ? "" : `<div class="empty">None of the selected projects has a SANA code (e.g. SANA01) in its sana_project.</div>`)+Object.keys(RAWS).map(k=>{ const R=RAWS[k];
+    const ets=R.dicts.experiment_type.map(x=>ETN[x]||x).join(" · ");
+    return `<button type="button" class="study" data-proj="${k}"><span class="study-name">${k}</span><span class="study-n">${R.n.toLocaleString()} wells</span><span class="study-et">${esc(ets)}</span><span class="study-go">Open study →</span></button>`; }).join("");
+}
+function showCover(){ $("#selectView").hidden=true; $("#studyView").hidden=true; $("#coverView").hidden=false; hideTip(); try{ history.replaceState(null,"",location.pathname+location.search); }catch(e){} window.scrollTo(0,0); }
+function openStudy(k){
+  PROJ=k; RAW=RAWS[k]; D=RAW.dicts; C=RAW.cols; N=RAW.n;
+  IDX=Array.from({length:N},(_,i)=>i); ALL_ASM=[...new Set(IDX.map(asm))].sort(); ALL_TGT=D.target_spec_name.slice().sort(clSort);
+  st.target=null; st.asm=null; st.dose=""; st.q=""; st.plate=""; st.pj=""; st.hpage=0; st.xpage=0; st.page=0; st.wf={plate:"",well:"",project:""}; st.sel=[]; st.cleared=false;
+  if(!D.experiment_type.includes(st.et)) st.et=D.experiment_type[0];
+  $("#projName").textContent=k; $("#selectView").hidden=true; $("#coverView").hidden=true; $("#studyView").hidden=false;
+  try{ history.replaceState(null,"","#"+k); }catch(e){}
+  renderMeta(); renderAll(); window.scrollTo(0,0);
+}
+$("#studyCards").addEventListener("click",e=>{const b=e.target.closest("[data-proj]"); if(b) openStudy(b.dataset.proj);});
+$("#backBtn").addEventListener("click",showCover);
+/* ---------- shared to-drop list needs the app's storage (db) and editor check (assets) ---------- */
+let DBX=null, ASX=null;
+(async()=>{ const use=window.claude&&window.claude.use;
+  try{ DBX = use ? await window.claude.use("db") : null; }catch(e){ DBX=null; }
+  try{ ASX = use ? await window.claude.use("assets") : null; }catch(e){ ASX=null; }
+  renderDrop(); })();
+/* ---------- project selection page <-> studies ---------- */
+function showSelect(){ $("#studyView").hidden=true; $("#coverView").hidden=true; $("#selectView").hidden=false; hideTip(); try{ history.replaceState(null,"",location.pathname+location.search); }catch(e){} window.scrollTo(0,0); }
+$("#toSelect").addEventListener("click",showSelect);
+/* called by the project selection page with the study data it built */
+window.PORTAL = { load(raws, meta){
+  for(const k of Object.keys(RAWS)) delete RAWS[k];
+  for(const [k,R] of Object.entries(raws)){ pruneZero(R); RAWS[k]=R; }
+  META = meta||""; CART.clear(); renderCart(); renderCover(); showCover(); } };
+showSelect();
+</script>
+<script>
+/* ===== Project selection page: reads every *gated-results.csv in a folder (mirrors results_summary_table() in the R script),
+   lets the viewer pick projects, then builds the SANA01 / SANA03 / SANA04 study data for the portal ===== */
+(()=>{
+const COLS = [
+  ["date_created","str"],["project_group","str"],["project_name","str"],["sana_project","str"],
+  ["experiment_type","str"],["dosing_schedule","str"],
+  ["wells_n","num"],["mfi_channel","str"]
+];
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let ROWS = [], ROOT = "", WELLS = new Map(), SELECTED = new Set();
+let sort = {k:"date_created", dir:"desc"};
+let PAGE = 0, LOADS = 0; const PS = 10; // rows per page
+
+/* ---------- CSV parsing (RFC 4180: quoted fields, "" escapes, newlines in quotes) ---------- */
+function parseCSV(text){
+  if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
+  const rows=[]; let row=[], f="", q=false, i=0, n=text.length;
+  while(i<n){
+    const c=text[i];
+    if(q){
+      if(c==='"'){ if(text[i+1]==='"'){ f+='"'; i+=2; continue; } q=false; i++; continue; }
+      f+=c; i++; continue;
+    }
+    if(c==='"'){ q=true; i++; continue; }
+    if(c===','){ row.push(f); f=""; i++; continue; }
+    if(c==='\r'){ i++; continue; }
+    if(c==='\n'){ row.push(f); rows.push(row); row=[]; f=""; i++; continue; }
+    f+=c; i++;
+  }
+  if(f!=="" || row.length){ row.push(f); rows.push(row); }
+  return rows.filter(r=>!(r.length===1 && r[0]===""));
+}
+/* R's read.csv turns "NA" and empty numeric cells into NA */
+const isNA = x => x==null || x==="NA" || x==="";
+const first = a => a.length ? a[0] : null;
+const uniq = a => [...new Set(a)];
+
+/* well-level columns the portal needs (one entry per CSV row) */
+const WELL_COLS = ["experiment_type","dosing_schedule","dose_type","Platename","target_spec_name","probe_name","Probe ID","Primary Role",
+  "mfi_channel","DATE","probe_conc","Plate Position","Probe Quant Value","gMFI","gMFI_med","Log10 MFI","/intact/singlet/viable","Result","notes"];
+
+/* ---------- one summary row per file (mirrors the R loop) + its wells ---------- */
+function summarise(text, relPath, file){
+  const rows=parseCSV(text);
+  if(!rows.length) throw new Error("empty file");
+  const head=rows[0], body=rows.slice(1);
+  const ix=name=>head.indexOf(name);
+  const col=name=>{ const k=ix(name); return k<0 ? body.map(()=>null) : body.map(r=>r[k]); };
+  const need=["Target Spec ID","Probe ID","Platename"];
+  const miss=need.filter(n=>ix(n)<0);
+  if(miss.length) throw new Error("missing column(s): "+miss.join(", "));
+  const val1=name=>{ const x=first(col(name)); return isNA(x)?"NA":x; };
+
+  const sana = uniq(col("sana_project")).filter(x=>!isNA(x)).sort((a,b)=>a.localeCompare(b));
+  const expt = uniq(col("experiment_type")).map(x=>isNA(x)?"NA":x);
+
+  const parts=relPath.split("/");           // [root, project_group, project_name, ...]
+  const d=new Date(file.lastModified);
+  const pad=x=>String(x).padStart(2,"0");
+  const wells={n:body.length, c:{}};
+  for(const k of WELL_COLS) wells.c[k]=col(k).map(x=>x==null?"NA":x);
+  return { row:{
+    date_created: `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`,
+    project_group: parts[1] ?? "NA",
+    project_name: parts.length>3 ? parts[2] : "NA",
+    sana_project: sana.join(", "),
+    experiment_type: expt.join(", "),
+    dosing_schedule: val1("dosing_schedule"),
+    wells_n: body.length,
+    mfi_channel: val1("mfi_channel"),
+    _rel: relPath,
+    _ts: file.lastModified
+  }, wells };
+}
+/* from the R script: ifelse(experiment_type=="binding_expr", "Binding expression", "Internalization") */
+// NA stays NA (as ifelse does); a file with several experiment types gets each one relabelled
+function relabel(o){ const v=String(o.experiment_type);
+  o.experiment_type = v==="NA" ? "NA" : uniq(v.split(", ").map(x=>x==="binding_expr"?"Binding expression":"Internalization")).join(", ");
+  return tidySana(o); }
+/* from the R script: gsub("\\|", ", ", x), then split on ", ", sort(unique()), paste with ", " */
+// blank pieces (e.g. "SANA03|") are dropped; safe to run more than once
+function tidySana(o){ o.sana_project = uniq(String(o.sana_project ?? "").replace(/\|/g, ", ").split(",").map(x=>x.trim()).filter(Boolean)).sort((a,b)=>a.localeCompare(b)).join(", "); return o; }
+/* study codes of a project: every "SANAnn" that appears anywhere in its sana_project */
+const codesOf = o => uniq((String(o.sana_project).toUpperCase().match(/SANA\d+/g))||[]);
+
+/* ---------- load a folder ---------- */
+// items: [{file, rel}] where rel = "<folder>/<sub>/.../x_gated-results.csv"
+async function loadFolder(items, root){
+  const files=items.filter(x=>/gated-results\.csv$/.test(x.file.name) && !x.rel.split("/").some(p=>p.startsWith(".")))
+    .sort((a,b)=>a.rel.localeCompare(b.rel)); // same order as list.files(), so ties sort like R
+  const token=++LOADS;
+  const errs=[], rows=[], wells=new Map();
+  $("#status").className="status"; $("#status").textContent=`Reading ${files.length} file(s)…`;
+  for(const {file:f, rel} of files){
+    try{ const txt=await f.text(); if(token!==LOADS) return; // a newer folder was picked meanwhile
+      const s=summarise(txt, rel, f); rows.push(relabel(s.row)); wells.set(s.row._rel, s.wells); }
+    catch(err){ errs.push(`${rel}: ${err.message}`); }
+  }
+  if(root!==ROOT) SELECTED.clear();
+  ROWS=rows; WELLS=wells; ROOT=root;
+  { const ok=new Set(ROWS.map(o=>o._rel)); for(const k of [...SELECTED]) if(!ok.has(k)) SELECTED.delete(k); }
+  $("#errs").innerHTML=errs.map(x=>`<li>${esc(x)}</li>`).join("");
+  $("#status").textContent = files.length ? `${ROWS.length} file(s) from ${ROOT}${errs.length?` · ${errs.length} skipped`:""}` : `No files ending in gated-results.csv in ${ROOT||"that folder"}`;
+  if(!files.length) $("#status").className="status err";
+  if(window.FOLDER && window.FOLDER.dir) $("#status").textContent += " · drop lists save to 00-drop-folder";
+  sort={k:"date_created",dir:"desc"}; PAGE=0;
+  fillAll(); render();
+  if(ROWS.length) saveTable();
+}
+/* fallback (browsers without folder access, e.g. Safari/Firefox): read-only folder picker */
+$("#dirInput").addEventListener("change", e=>{
+  const fs=[...e.target.files]; const root=(fs[0]?.webkitRelativePath||"").split("/")[0]||""; e.target.value="";
+  window.FOLDER={dir:null, root};
+  loadFolder(fs.map(f=>({file:f, rel:f.webkitRelativePath||f.name})), root);
+});
+/* Chrome / Edge: pick the folder with read + write access, so the to-drop CSV can be saved into <folder>/00-drop-folder */
+async function walk(dir, prefix, out){
+  for await (const [name,h] of dir.entries()){
+    if(name.startsWith(".")) continue;
+    if(h.kind==="directory") await walk(h, prefix+name+"/", out);
+    else if(/gated-results\.csv$/.test(name)) out.push({file:await h.getFile(), rel:prefix+name});
+  }
+}
+$("#dirInput").closest("label").addEventListener("click", async e=>{
+  if(!window.showDirectoryPicker) return; // use the plain picker
+  e.preventDefault();
+  let dir; try{ dir=await window.showDirectoryPicker({id:"flow-project", mode:"readwrite"}); }
+  catch(err){ if(err.name!=="AbortError"){ $("#status").className="status err"; $("#status").textContent="Could not open the folder ("+err.name+")"; } return; }
+  $("#status").className="status"; $("#status").textContent="Looking for gated-results files…";
+  const items=[]; try{ await walk(dir, dir.name+"/", items); }catch(err){ $("#status").className="status err"; $("#status").textContent="Could not read the folder ("+err.name+")"; return; }
+  window.FOLDER={dir, root:dir.name}; idbSet("folder", dir);
+  loadFolder(items, dir.name);
+});
+/* "Refresh data": read the same folder again (picks up new or changed gated-results files) */
+$("#refBtn").addEventListener("click", async ()=>{
+  const F=window.FOLDER, st=$("#status");
+  SELECTED.clear(); saveSel(); render(); // Refresh also clears any selected rows in the table
+  if(F && F.dir){
+    try{ if(F.dir.queryPermission && (await F.dir.queryPermission({mode:"readwrite"}))!=="granted" && (await F.dir.requestPermission({mode:"readwrite"}))!=="granted"){ st.className="status err"; st.textContent="No permission to read the folder"; return; } }
+    catch(err){ st.className="status err"; st.textContent="Could not use the folder ("+err.name+")"; return; }
+    st.className="status"; st.textContent="Looking for gated-results files…";
+    const items=[]; try{ await walk(F.dir, F.dir.name+"/", items); }catch(err){ st.className="status err"; st.textContent="Could not read the folder ("+err.name+")"; return; }
+    loadFolder(items, F.dir.name); return; }
+  // the folder is not remembered (or this browser cannot re-open it): ask for it again
+  if(window.showDirectoryPicker) $("#pickBtn").click(); else $("#dirInput").click();
+});
+/* remember the folder handle (IndexedDB) so the drop CSV can still be saved after a reload; the browser asks again for permission on first save */
+function idb(){ return new Promise((ok,no)=>{ const q=indexedDB.open("flow-portal",1); q.onupgradeneeded=()=>q.result.createObjectStore("kv"); q.onsuccess=()=>ok(q.result); q.onerror=()=>no(q.error); }); }
+async function idbSet(k,v){ try{ const d=await idb(); d.transaction("kv","readwrite").objectStore("kv").put(v,k); }catch(e){} }
+async function idbGet(k){ try{ const d=await idb(); return await new Promise(ok=>{ const q=d.transaction("kv").objectStore("kv").get(k); q.onsuccess=()=>ok(q.result); q.onerror=()=>ok(null); }); }catch(e){ return null; } }
+function fillSelect(sel,key){
+  const cur=$(sel).value;
+  const opts=uniq(ROWS.map(r=>r[key])).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+  $(sel).innerHTML=`<option value="">All (${opts.length})</option>`+opts.map(o=>`<option${o===cur?" selected":""}>${esc(o)}</option>`).join("");
+}
+function fillAll(){ fillSelect("#fGroup","project_group"); fillSelect("#fExp","experiment_type"); fillSelect("#fSana","sana_project"); }
+
+/* ---------- table ---------- */
+function view(){
+  const g=$("#fGroup").value, x=$("#fExp").value, sp=$("#fSana").value;
+  const r=ROWS.filter(o=>(!g||o.project_group===g) && (!x||o.experiment_type===x) && (!sp||o.sana_project===sp));
+  const t=(COLS.find(c=>c[0]===sort.k)||[])[1], d=sort.dir==="asc"?1:-1;
+  const get=o=> sort.k==="date_created" ? o._ts : o[sort.k];
+  // R: rev(order(date_created)) -> newest first; ties keep reverse file order
+  return r.map((o,i)=>[o,i]).sort((A,B)=>{ const a=get(A[0]), b=get(B[0]);
+    const c = (t==="num"||sort.k==="date_created") ? a-b : String(a).localeCompare(String(b),undefined,{numeric:true});
+    return c ? c*d : (B[1]-A[1]); }).map(z=>z[0]);
+}
+function render(){
+  $("#folder").textContent = ROOT ? "Folder: "+ROOT : "No folder chosen";
+  $("#clrBtn").hidden = !ROOT;
+  $("#refBtn").hidden = !ROOT; $("#pickBtn").hidden = !!ROOT; // once a folder is chosen, "Refresh data" replaces "Choose folder" (Clear brings it back)
+  const has=ROWS.length>0;
+  $("#emptyBox").hidden=has; $("#tableBox").hidden=!has; $("#foot").hidden=!has; $("#actions").hidden=!has;
+  renderSel();
+  if(!has) return;
+  const r=view();
+  const pages=Math.max(1,Math.ceil(r.length/PS)); PAGE=Math.min(Math.max(PAGE,0),pages-1);
+  const pg=r.slice(PAGE*PS,(PAGE+1)*PS);
+  $("#tbl thead").innerHTML="<tr><th class=\"rn\"></th>"+COLS.map(([k,t])=>`<th class="${t==="num"?"num":""}" data-k="${k}" ${sort.k===k?`data-dir="${sort.dir}"`:""}>${k}</th>`).join("")+"</tr>";
+  $("#tbl tbody").innerHTML=pg.map((o,i)=>{ const on=SELECTED.has(o._rel);
+    return `<tr data-rel="${esc(o._rel)}" class="${on?"picked":""}" aria-selected="${on}"><td class="rn">${PAGE*PS+i+1}</td>`+COLS.map(([k,t])=>{
+      const v=o[k]; return `<td class="${t==="num"?"num":(v==="NA"?"na":"")}">${esc(v)}</td>`; }).join("")+"</tr>"; }).join("");
+  const nums=[]; for(let p=0;p<pages;p++){ if(pages<=9 || p===0 || p===pages-1 || Math.abs(p-PAGE)<=1) nums.push(p); else if(nums[nums.length-1]!=="…") nums.push("…"); }
+  $("#foot").innerHTML=`<nav class="gpager" aria-label="Table pages"><button type="button" data-pg="-1" ${PAGE===0?"disabled":""}>Previous</button>${nums.map(p=>p==="…"?`<span>…</span>`:`<button type="button" data-go="${p}" class="${p===PAGE?"on":""}" ${p===PAGE?'aria-current="page"':""}>${p+1}</button>`).join("")}<button type="button" data-pg="1" ${PAGE>=pages-1?"disabled":""}>Next</button></nav><div class="total">Total Sample Size: ${r.reduce((s,o)=>s+(Number(o.wells_n)||0),0)}</div>`;
+}
+function renderSel(){
+  const n=SELECTED.size;
+  $("#nextBtn").disabled=!n;
+  $("#nextBtn").textContent = n ? `Next: open ${n} selected project${n===1?"":"s"} →` : "Next →";
+  $("#selClrBtn").disabled=!n;
+  $("#selCount").textContent = n ? "" : "No projects selected yet";
+}
+$("#tbl").addEventListener("click",e=>{
+  const th=e.target.closest("th[data-k]");
+  if(th){ const k=th.dataset.k; sort = sort.k===k ? {k,dir:sort.dir==="asc"?"desc":"asc"} : {k,dir:(k==="date_created"||th.classList.contains("num"))?"desc":"asc"}; PAGE=0; render(); return; }
+  const tr=e.target.closest("tbody tr[data-rel]");
+  if(tr){ const k=tr.dataset.rel; if(SELECTED.has(k)) SELECTED.delete(k); else SELECTED.add(k); saveSel(); render(); }
+});
+["#fGroup","#fExp","#fSana"].forEach(s=>$(s).addEventListener("input",()=>{ PAGE=0; render(); }));
+$("#foot").addEventListener("click",e=>{ const g=e.target.closest("[data-go]"); if(g){ PAGE=Number(g.dataset.go); render(); return; } const b=e.target.closest("[data-pg]"); if(!b) return; PAGE+=Number(b.dataset.pg); render(); });
+$("#selAllBtn").addEventListener("click",()=>{ for(const o of view()) SELECTED.add(o._rel); saveSel(); render(); });
+$("#selClrBtn").addEventListener("click",()=>{ SELECTED.clear(); saveSel(); render(); });
+
+/* ---------- build the study data (same layout the portal used for its SANA01 / SANA03 / SANA04 files) ---------- */
+const DICT_COLS=['experiment_type','dosing_schedule','dose_type','project_name','Platename','target_spec_name','probe_name','Probe ID','Primary Role','mfi_channel','date','probe_conc','notes'];
+const MON={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+function isoDate(x){ x=String(x??"").trim(); let m;
+  if((m=x.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))) return `${m[1]}-${m[2].padStart(2,"0")}-${m[3].padStart(2,"0")}`;
+  if((m=x.match(/^(\d{1,2})[-\/ ]([A-Za-z]{3})[A-Za-z]*[-\/ ](\d{2,4})$/)) && MON[m[2].toLowerCase()]) return `${m[3].length===2?"20"+m[3]:m[3]}-${String(MON[m[2].toLowerCase()]).padStart(2,"0")}-${m[1].padStart(2,"0")}`;
+  return x; }
+const num = x => { const n=parseFloat(x); return isNaN(n)?null:n; };
+function buildRaw(parts){ // parts: [{project, w}] -> {dicts, cols, n}
+  const get={}, raw={};
+  for(const k of DICT_COLS) raw[k]=[];
+  const nums={well:[],conc:[],gmfi:[],gmed:[],log10:[],viable:[],total:[]};
+  for(const {project,w} of parts){ const c=w.c;
+    for(let i=0;i<w.n;i++){
+      for(const k of DICT_COLS) raw[k].push(k==="project_name"?project : k==="date"?isoDate(c.DATE[i]) : c[k][i]);
+      nums.well.push(c["Plate Position"][i]); nums.conc.push(num(c["Probe Quant Value"][i]));
+      nums.gmfi.push(num(c.gMFI[i])); nums.gmed.push(num(c.gMFI_med[i])); nums.log10.push(num(c["Log10 MFI"][i]));
+      nums.viable.push(num(c["/intact/singlet/viable"][i])); nums.total.push(num(c.Result[i]));
+    } }
+  const dicts={}, cols={};
+  for(const k of DICT_COLS){ const u=uniq(raw[k]).sort(); const m=new Map(u.map((x,i)=>[x,i])); dicts[k]=u; cols[k]=raw[k].map(x=>m.get(x)); }
+  Object.assign(cols,nums);
+  return {dicts, cols, n:raw.experiment_type.length};
+}
+$("#nextBtn").addEventListener("click",()=>{
+  const chosen=ROWS.filter(o=>SELECTED.has(o._rel));
+  const missing=chosen.filter(o=>!WELLS.has(o._rel));
+  if(missing.length){ $("#status").className="status err"; $("#status").textContent=`The well data for ${missing.length} selected project(s) is not in this browser any more. Choose the folder again, then click Next.`; return; }
+  const by=new Map(), none=[];
+  for(const o of chosen){ const cs=codesOf(o); if(!cs.length) none.push(o.project_name);
+    for(const c of cs){ if(!by.has(c)) by.set(c,[]); by.get(c).push({project:o.project_name, w:WELLS.get(o._rel)}); } }
+  const raws={}; for(const c of [...by.keys()].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}))) raws[c]=buildRaw(by.get(c));
+  const meta=`Folder ${ROOT} · ${chosen.length} project${chosen.length===1?"":"s"} selected`+(none.length?` · ${none.length} with no SANA code: ${none.join(", ")}`:"");
+  window.PORTAL.load(raws, meta);
+});
+
+/* ---------- kept in this browser until cleared: the summary table, the well data and the selection ---------- */
+const SAVE_KEY="grs-saved-table", WELL_KEY="grs-saved-wells", SEL_KEY="grs-selected";
+function enc(w){ const c={}; for(const k of WELL_COLS){ const u=uniq(w.c[k]); const m=new Map(u.map((x,i)=>[x,i])); c[k]={d:u,i:w.c[k].map(x=>m.get(x))}; } return {n:w.n,c}; }
+function dec(e){ const c={}; for(const k of WELL_COLS){ const x=e.c[k]; c[k]=x?x.i.map(i=>x.d[i]):Array(e.n).fill("NA"); } return {n:e.n,c}; }
+function saveTable(){
+  const at=new Date().toISOString();
+  try{ localStorage.setItem(SAVE_KEY, JSON.stringify({v:3, root:ROOT, rows:ROWS, savedAt:at})); $("#status").textContent+=" · saved in this browser"; }
+  catch(err){ $("#status").textContent+=" · could not save (browser storage is blocked or full)"; }
+  try{ localStorage.setItem(WELL_KEY, JSON.stringify({root:ROOT, files:Object.fromEntries([...WELLS].map(([k,w])=>[k,enc(w)]))})); }
+  catch(err){ try{ localStorage.removeItem(WELL_KEY); }catch(e){} } // too big for this browser: the folder has to be chosen again after a reload
+  saveSel();
+}
+function saveSel(){ try{ localStorage.setItem(SEL_KEY, JSON.stringify({root:ROOT, sel:[...SELECTED]})); }catch(e){} }
+(function restore(){
+  let d=null; try{ d=JSON.parse(localStorage.getItem(SAVE_KEY)||"null"); }catch(e){ d=null; }
+  if(!d || !Array.isArray(d.rows) || !d.rows.length) return;
+  if(d.v===2){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} return; }
+  ROWS = d.v===3 ? d.rows.map(tidySana) : d.rows.map(relabel); ROOT=d.root||"";
+  try{ const w=JSON.parse(localStorage.getItem(WELL_KEY)||"null"); if(w && w.root===ROOT) WELLS=new Map(Object.entries(w.files).map(([k,e])=>[k,dec(e)])); }catch(e){}
+  try{ const s=JSON.parse(localStorage.getItem(SEL_KEY)||"null"); const ok=new Set(ROWS.map(o=>o._rel)); if(s && s.root===ROOT) SELECTED=new Set(s.sel.filter(k=>ok.has(k))); }catch(e){}
+  fillAll(); render();
+  idbGet("folder").then(h=>{ if(h && h.name===ROOT) window.FOLDER={dir:h, root:ROOT}; });
+})();
+$("#clrBtn").addEventListener("click",()=>{
+  for(const k of [SAVE_KEY,WELL_KEY,SEL_KEY]){ try{ localStorage.removeItem(k); }catch(e){} }
+  ROWS=[]; ROOT=""; WELLS=new Map(); SELECTED.clear(); PAGE=0; $("#errs").innerHTML=""; window.FOLDER=null; idbSet("folder", null);
+  fillAll();
+  $("#status").className="status"; $("#status").textContent="";
+  render();
+});
+render();
+})();
+</script>
+
+</body>
+</html>

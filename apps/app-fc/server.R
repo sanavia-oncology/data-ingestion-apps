@@ -1197,6 +1197,23 @@ server = function(input, output, session) {
         
         gate_file_name = paste0(selected_project, "_gated-results.csv")
         gate_file_path = paste0(gating_results_fldr, "/", gate_file_name)
+        
+        #------ K.O. fix column names
+        cn = colnames(results_table)
+        cn = gsub(".[0-9]$", "", cn)
+        dup_cols = duplicated(cn)
+        if (any(dup_cols)) {
+            for (k in unique(cn[dup_cols])) {
+                sel = cn %in% k
+                tmp = cn[sel]
+                tmp = paste0(tmp, ".", seq(1:sum(sel)) - 1)
+                tmp[1] = k
+                cn[sel] = tmp
+            }
+        }
+        colnames(results_table) = cn
+        #------ end
+        
         write.csv(results_table, file = gate_file_path, row.names = FALSE)
         
         # save optim_verts_list
@@ -1255,18 +1272,19 @@ server = function(input, output, session) {
             }
         }
         
-        # copy to gdrive
-        GDRIVE_DIR = Sys.getenv("GDRIVE_DIR")
-        GDRIVE_DIR_SAVE = paste0(GDRIVE_DIR, 
-                                 gsub(folder_path, "", gating_results_fldr))
-        GDRIVE_DIR_SAVE = gsub("gating_results", "", GDRIVE_DIR_SAVE)
-        
-        if (!dir.exists(GDRIVE_DIR_SAVE)) {
-            dir.create(GDRIVE_DIR_SAVE, recursive = TRUE)
-        }
-        
-        sys_cmp = paste0("cp -r ", gating_results_fldr, " ", GDRIVE_DIR_SAVE)
-        system(sys_cmp)
+        # K.O. changes
+        # # copy to gdrive
+        # GDRIVE_DIR = Sys.getenv("GDRIVE_DIR")
+        # GDRIVE_DIR_SAVE = paste0(GDRIVE_DIR, 
+        #                          gsub(folder_path, "", gating_results_fldr))
+        # GDRIVE_DIR_SAVE = gsub("gating_results", "", GDRIVE_DIR_SAVE)
+        # 
+        # if (!dir.exists(GDRIVE_DIR_SAVE)) {
+        #     dir.create(GDRIVE_DIR_SAVE, recursive = TRUE)
+        # }
+        # 
+        # sys_cmp = paste0("cp -r ", gating_results_fldr, " ", GDRIVE_DIR_SAVE)
+        # system(sys_cmp)
         
     }) |> bindEvent(input$save_exit)
     
