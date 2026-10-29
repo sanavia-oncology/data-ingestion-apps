@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
-# End-to-end test of apps/tlgs-portal: copies the demo fixture to a scratch folder, starts the app on it, runs Playwright, stops it.
-# Usage: bash tests/e2e/run.sh [playwright args]   Env: TLGS_FIXTURE (default ~/workbench/fixtures/00-flow-cytometry-demo), E2E_PORT (3912)
+# End-to-end test of apps/tlgs-portal: unpacks Kwame's demo DB zip into a scratch folder, starts the app on it, runs Playwright, stops it.
+# Usage: bash tests/e2e/run.sh [playwright args]   Env: TLGS_DEMO_ZIP (default ~/workbench/fixtures/_archive/2026-10-28_00-flow-cytometry-demo.zip), E2E_PORT (3912)
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
-FIXTURE="${TLGS_FIXTURE:-$HOME/workbench/fixtures/00-flow-cytometry-demo}"
+ZIP="${TLGS_DEMO_ZIP:-$HOME/workbench/fixtures/_archive/2026-10-28_00-flow-cytometry-demo.zip}"
 PORT="${E2E_PORT:-3912}"
-[ -d "$FIXTURE/00-drop-folder" ] || { echo "no fixture at $FIXTURE" >&2; exit 1; }
+[ -f "$ZIP" ] || { echo "no demo zip at $ZIP" >&2; exit 1; }
 WORK=$(mktemp -d)
-cp -R "$FIXTURE" "$WORK/data"
+unzip -q "$ZIP" -d "$WORK" -x '__MACOSX/*' '*/.DS_Store'
+mv "$WORK/00-flow-cytometry-demo" "$WORK/data"
 DATA_DIR="$WORK/data" R --quiet -e "shiny::runApp('$ROOT/apps/tlgs-portal', host = '127.0.0.1', port = $PORT, launch.browser = FALSE)" > "$WORK/app.log" 2>&1 &
 APP=$!
 trap 'kill $APP 2>/dev/null; wait $APP 2>/dev/null; rm -rf "${WORK:?}"' EXIT
