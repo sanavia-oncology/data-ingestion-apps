@@ -26,8 +26,3 @@ apps/transfer-qc/www/docs/tlgs/*.pdf
 # Claude Code project instructions, local only.
 CLAUDE.md
 .claude/
-
-# Playwright for apps/tlgs-app (tests/e2e/run.sh)
-tests/e2e/node_modules/
-tests/e2e/test-results/
-tests/e2e/playwright-report/
