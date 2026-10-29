@@ -27,7 +27,7 @@ apps/transfer-qc/www/docs/tlgs/*.pdf
 CLAUDE.md
 .claude/
 
-# Playwright for apps/tlgs-app (tests/e2e/run.sh)
+# Playwright for apps/tlgs-portal (tests/e2e/run.sh)
 tests/e2e/node_modules/
 tests/e2e/test-results/
 tests/e2e/playwright-report/

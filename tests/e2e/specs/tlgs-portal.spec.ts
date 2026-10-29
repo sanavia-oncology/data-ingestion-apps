@@ -2,7 +2,7 @@ import { test, expect, type Page, type APIRequestContext } from '@playwright/tes
 import { cpSync, readFileSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 
-// Serial walk through the local TLGs app on a scratch copy of Kwame's demo fixture (E2E_DATA_DIR):
+// Serial walk through the local tlgs-portal app on a scratch copy of Kwame's demo fixture (E2E_DATA_DIR):
 // build on start → publish a sheet → rebuild → drop a well → rebuild → undrop → rebuild.
 const DATA = process.env.E2E_DATA_DIR!;
 const DROP = join(DATA, '00-drop-folder', 'to-drop-wells_cummulative.csv');

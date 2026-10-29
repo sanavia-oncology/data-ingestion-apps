@@ -1,4 +1,4 @@
-# tlgs-app
+# tlgs-portal
 
 Kwame's flow cytometry portal, local copy: shows the studies and writes the drop list.
 
@@ -7,7 +7,7 @@ Needs R with `shiny`, `bslib`, `jsonlite`, `dotenv`.
 ## Run
 
 ```
-R -e "shiny::runApp('apps/tlgs-app', port = 3012)"
+R -e "shiny::runApp('apps/tlgs-portal', port = 3012)"
 ```
 
 Reads `DATA_DIR` (the FC data folder) and optional `TLGS_DIR` from `~/.env_data_ingestion_apps`, or from the

@@ -1,5 +1,5 @@
 # TLGs portal, local copy: Kwame's portal.html with the drop list written to DATA_DIR.
-# Run: R -e "shiny::runApp('apps/tlgs-app', port = 3012)"
+# Run: R -e "shiny::runApp('apps/tlgs-portal', port = 3012)"
 # Reads DATA_DIR and optional TLGS_DIR from ~/.env_data_ingestion_apps, or from the environment when DATA_DIR is already set.
 
 library(shiny)
